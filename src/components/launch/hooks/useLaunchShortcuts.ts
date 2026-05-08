@@ -81,6 +81,8 @@ export function useLaunchShortcuts({
 
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.repeat) return;
+
 			for (const action of LAUNCH_SHORTCUT_ACTIONS) {
 				if (!matchesShortcut(e, launchShortcuts[action], isMac)) continue;
 				e.preventDefault();
