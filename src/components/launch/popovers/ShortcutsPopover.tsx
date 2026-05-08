@@ -83,6 +83,7 @@ export function ShortcutsPopover({ trigger }: { trigger: ReactElement }) {
 			onOpenChange={(nextOpen) => (nextOpen ? requestOpen(POPOVER_ID) : requestClose(POPOVER_ID))}
 			trigger={trigger}
 			align="end"
+			contentClassName={styles.shortcutsMenuCard}
 		>
 			<div className={styles.ddLabel}>{t("recording.shortcuts.title")}</div>
 			{LAUNCH_SHORTCUT_ACTIONS.map((action) => {
