@@ -47,12 +47,31 @@ function getBrowserMicrophoneProfileFromEnv() {
 }
 
 let launchShortcutRegisteredAccelerators: string[] = [];
+const ELECTRON_KEY_MAP: Record<string, string> = {
+	arrowup: "Up",
+	arrowdown: "Down",
+	arrowleft: "Left",
+	arrowright: "Right",
+	escape: "Escape",
+	backspace: "Backspace",
+	delete: "Delete",
+	enter: "Enter",
+	tab: "Tab",
+};
 
 function toElectronAccelerator(binding: ShortcutBinding): string | null {
 	const key = binding.key?.trim().toLowerCase();
 	if (!key) return null;
-	const mappedKey =
-		key === " " ? "Space" : key.length === 1 ? key.toUpperCase() : key.charAt(0).toUpperCase() + key.slice(1);
+	let mappedKey: string;
+	if (key === " ") {
+		mappedKey = "Space";
+	} else if (ELECTRON_KEY_MAP[key]) {
+		mappedKey = ELECTRON_KEY_MAP[key];
+	} else if (key.length === 1) {
+		mappedKey = key.toUpperCase();
+	} else {
+		mappedKey = key.charAt(0).toUpperCase() + key.slice(1);
+	}
 	const parts: string[] = [];
 	if (binding.ctrl) parts.push("CommandOrControl");
 	if (binding.shift) parts.push("Shift");
