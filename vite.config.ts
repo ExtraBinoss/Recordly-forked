@@ -35,7 +35,7 @@ export default defineConfig({
 						lib: {
 							entry: "electron/main.ts",
 							formats: ["cjs"],
-							fileName: () => "[name].cjs",
+							fileName: (_format, entryName) => `${entryName}.cjs`,
 						},
 						rollupOptions: {
 							external: ["ffmpeg-static", "uiohook-napi"],
