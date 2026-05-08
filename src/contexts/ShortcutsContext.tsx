@@ -30,9 +30,6 @@ interface ShortcutsContextValue {
 	isConfigOpen: boolean;
 	openConfig: () => void;
 	closeConfig: () => void;
-	isLaunchConfigOpen: boolean;
-	openLaunchConfig: () => void;
-	closeLaunchConfig: () => void;
 }
 
 const ShortcutsContext = createContext<ShortcutsContextValue | null>(null);
@@ -49,7 +46,6 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
 		useState<LaunchShortcutsConfig>(DEFAULT_LAUNCH_SHORTCUTS);
 	const [isMac, setIsMac] = useState(false);
 	const [isConfigOpen, setIsConfigOpen] = useState(false);
-	const [isLaunchConfigOpen, setIsLaunchConfigOpen] = useState(false);
 
 	useEffect(() => {
 		getIsMac()
@@ -81,8 +77,6 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
 
 	const openConfig = useCallback(() => setIsConfigOpen(true), []);
 	const closeConfig = useCallback(() => setIsConfigOpen(false), []);
-	const openLaunchConfig = useCallback(() => setIsLaunchConfigOpen(true), []);
-	const closeLaunchConfig = useCallback(() => setIsLaunchConfigOpen(false), []);
 
 	const value = useMemo<ShortcutsContextValue>(
 		() => ({
@@ -95,9 +89,6 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
 			isConfigOpen,
 			openConfig,
 			closeConfig,
-			isLaunchConfigOpen,
-			openLaunchConfig,
-			closeLaunchConfig,
 		}),
 		[
 			shortcuts,
@@ -107,9 +98,6 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
 			isConfigOpen,
 			openConfig,
 			closeConfig,
-			isLaunchConfigOpen,
-			openLaunchConfig,
-			closeLaunchConfig,
 		],
 	);
 

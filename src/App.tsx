@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { CountdownOverlay } from "./components/countdown/CountdownOverlay";
-import { LaunchShortcutsConfigDialog } from "./components/launch/LaunchShortcutsConfigDialog";
 import { LaunchWindow } from "./components/launch/LaunchWindow";
 import { SourceSelector } from "./components/launch/SourceSelector";
 import { UpdateToastWindow } from "./components/launch/UpdateToastWindow";
@@ -61,7 +60,6 @@ export default function App() {
 			return (
 				<ShortcutsProvider>
 					<LaunchWindow />
-					<LaunchShortcutsConfigDialog />
 					<Toaster className="pointer-events-auto" />
 				</ShortcutsProvider>
 			);
@@ -76,7 +74,6 @@ export default function App() {
 				<ShortcutsProvider>
 					<VideoEditor />
 					<ShortcutsConfigDialog />
-					<LaunchShortcutsConfigDialog />
 				</ShortcutsProvider>
 			);
 		default:

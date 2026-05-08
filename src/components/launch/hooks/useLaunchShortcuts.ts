@@ -9,7 +9,6 @@ import {
 interface UseLaunchShortcutsParams {
 	launchShortcuts: LaunchShortcutsConfig;
 	isMac: boolean;
-	isLaunchConfigOpen: boolean;
 	recording: boolean;
 	paused: boolean;
 	countdownActive: boolean;
@@ -24,7 +23,6 @@ interface UseLaunchShortcutsParams {
 export function useLaunchShortcuts({
 	launchShortcuts,
 	isMac,
-	isLaunchConfigOpen,
 	recording,
 	paused,
 	countdownActive,
@@ -98,12 +96,6 @@ export function useLaunchShortcuts({
 		});
 		return () => unsubscribe?.();
 	}, [runLaunchShortcut]);
-
-	useEffect(() => {
-		if (isLaunchConfigOpen) {
-			window.electronAPI?.hudOverlaySetIgnoreMouse?.(false);
-		}
-	}, [isLaunchConfigOpen]);
 
 	useEffect(() => {
 		if (!recording) {

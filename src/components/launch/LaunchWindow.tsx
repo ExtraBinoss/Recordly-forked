@@ -34,6 +34,7 @@ import { MicPopover } from "./popovers/MicPopover";
 import { MorePopover } from "./popovers/MorePopover";
 import { ProjectPopover } from "./popovers/ProjectPopover";
 import { SourcePopover } from "./popovers/SourcePopover";
+import { ShortcutsPopover } from "./popovers/ShortcutsPopover";
 import { WebcamPopover } from "./popovers/WebcamPopover";
 import { HudInteractionContext } from "./contexts/HudInteractionContext";
 import { MarqueeText } from "./SourceSelector";
@@ -56,7 +57,7 @@ export function LaunchWindow() {
 
 function LaunchWindowContent() {
 	const t = useScopedT("launch");
-	const { launchShortcuts, isMac, isLaunchConfigOpen } = useShortcuts();
+	const { launchShortcuts, isMac } = useShortcuts();
 	const { openId, requestClose, requestOpen } = useLaunchPopoverCoordinator();
 
 	const {
@@ -172,7 +173,7 @@ function LaunchWindowContent() {
 
 	const { handleHudMouseEnter, handleHudMouseLeave, beginInteractiveHudAction } = useLaunchHudInteractionState({
 		openId,
-		hasModalOpen: isLaunchConfigOpen,
+		hasModalOpen: false,
 		isHudDraggingRef,
 		isWebcamPreviewDraggingRef,
 		webcamPreviewDragStartRef,
@@ -218,7 +219,6 @@ function LaunchWindowContent() {
 	useLaunchShortcuts({
 		launchShortcuts,
 		isMac,
-		isLaunchConfigOpen,
 		recording,
 		paused,
 		countdownActive,
@@ -372,6 +372,11 @@ function LaunchWindowContent() {
 				<ProjectPopover
 					entries={projectLibraryEntries}
 					onOpenProject={openProjectFromLibrary}
+					trigger={<div className="absolute inset-0 pointer-events-none opacity-0" />}
+				/>
+			</div>
+			<div className="relative w-0 h-0">
+				<ShortcutsPopover
 					trigger={<div className="absolute inset-0 pointer-events-none opacity-0" />}
 				/>
 			</div>
