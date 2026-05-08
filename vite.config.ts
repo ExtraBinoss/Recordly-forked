@@ -30,21 +30,15 @@ export default defineConfig({
 		react(),
 		electron({
 			main: {
-				// Shortcut of `build.lib.entry`.
-				entry: "electron/main.ts",
 				vite: {
 					build: {
 						lib: {
 							entry: "electron/main.ts",
 							formats: ["cjs"],
+							fileName: () => "[name].cjs",
 						},
 						rollupOptions: {
 							external: ["ffmpeg-static", "uiohook-napi"],
-							output: {
-								format: "cjs",
-								entryFileNames: "[name].cjs",
-								chunkFileNames: "[name].cjs",
-							},
 						},
 					},
 					plugins: [electronMainCjsGuardPlugin()],
