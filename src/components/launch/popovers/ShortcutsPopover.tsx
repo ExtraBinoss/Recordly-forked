@@ -36,8 +36,9 @@ export function ShortcutsPopover({ trigger }: { trigger: ReactElement }) {
 	const [conflictAction, setConflictAction] = useState<LaunchShortcutAction | null>(null);
 
 	useEffect(() => {
-		if (!open) return;
-		setDraft(launchShortcuts);
+		if (open) {
+			setDraft(launchShortcuts);
+		}
 		setCaptureFor(null);
 		setConflictAction(null);
 	}, [open, launchShortcuts]);
@@ -54,7 +55,7 @@ export function ShortcutsPopover({ trigger }: { trigger: ReactElement }) {
 			if (MODIFIER_KEYS.has(e.key)) return;
 			const nextBinding: ShortcutBinding = {
 				key: e.key.toLowerCase(),
-				...(e.ctrlKey || e.metaKey ? { ctrl: true } : {}),
+				...((isMac ? e.metaKey : e.ctrlKey) ? { ctrl: true } : {}),
 				...(e.shiftKey ? { shift: true } : {}),
 				...(e.altKey ? { alt: true } : {}),
 			};
@@ -115,9 +116,6 @@ export function ShortcutsPopover({ trigger }: { trigger: ReactElement }) {
 					})}
 				</div>
 			)}
-			<div className="px-2 py-1 text-[11px] text-[var(--launch-text-muted)]">
-				{t("recording.shortcuts.globalRecordingOnly")}
-			</div>
 			<div className="mt-1 flex gap-1">
 				<button
 					type="button"

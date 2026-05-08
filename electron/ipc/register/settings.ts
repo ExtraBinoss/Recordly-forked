@@ -7,7 +7,11 @@ import {
 	getCountdownWindow,
 	getHudOverlayWindow,
 } from "../../windows";
-import type { LaunchShortcutAction, ShortcutBinding } from "../shortcutTypes";
+import {
+	isLaunchShortcutAction,
+	type LaunchShortcutAction,
+	type ShortcutBinding,
+} from "../shortcutTypes";
 import {
 	COUNTDOWN_SETTINGS_FILE,
 	RECORDINGS_SETTINGS_FILE,
@@ -145,16 +149,20 @@ export function registerSettingsHandlers() {
 			const failedRegistrations: Array<{ action: LaunchShortcutAction; accelerator: string }> = [];
 			const entries = Object.entries(config as Record<string, ShortcutBinding>);
 			for (const [action, binding] of entries) {
+				if (!isLaunchShortcutAction(action)) {
+					console.warn("Ignoring unknown launch shortcut action in config:", action);
+					continue;
+				}
 				const accelerator = toElectronAccelerator(binding);
 				if (!accelerator) continue;
 				const registered = globalShortcut.register(accelerator, () => {
-					notifyLaunchShortcutTriggered(action as LaunchShortcutAction);
+					notifyLaunchShortcutTriggered(action);
 				});
 				if (registered) {
 					launchShortcutRegisteredAccelerators.push(accelerator);
 				} else {
 					const failedRegistration = {
-						action: action as LaunchShortcutAction,
+						action,
 						accelerator,
 					};
 					failedRegistrations.push(failedRegistration);
