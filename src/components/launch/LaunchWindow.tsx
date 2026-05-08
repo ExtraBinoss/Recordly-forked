@@ -14,12 +14,14 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { RxDragHandleDots2 } from "react-icons/rx";
 import { useScopedT } from "../../contexts/I18nContext";
+import { useShortcuts } from "../../contexts/ShortcutsContext";
 import { useHudBarDrag } from "./hooks/useHudBarDrag";
 import { useMicrophoneDevices } from "../../hooks/useMicrophoneDevices";
 import { useLaunchWindowSystemState } from "./hooks/useLaunchWindowSystemState";
 import { useLaunchHudInteractionState } from "./hooks/useLaunchHudInteractionState";
 import { useLaunchWindowActions } from "./hooks/useLaunchWindowActions";
 import { useRecordingTimer } from "./hooks/useRecordingTimer";
+import { useLaunchShortcuts } from "./hooks/useLaunchShortcuts";
 import { useScreenRecorder } from "../../hooks/useScreenRecorder";
 import { useVideoDevices } from "../../hooks/useVideoDevices";
 import { useWebcamPreviewOverlay } from "./hooks/useWebcamPreviewOverlay";
@@ -54,6 +56,7 @@ export function LaunchWindow() {
 
 function LaunchWindowContent() {
 	const t = useScopedT("launch");
+	const { launchShortcuts, isMac, isLaunchConfigOpen } = useShortcuts();
 	const { openId, requestClose, requestOpen } = useLaunchPopoverCoordinator();
 
 	const {
@@ -169,6 +172,7 @@ function LaunchWindowContent() {
 
 	const { handleHudMouseEnter, handleHudMouseLeave, beginInteractiveHudAction } = useLaunchHudInteractionState({
 		openId,
+		hasModalOpen: isLaunchConfigOpen,
 		isHudDraggingRef,
 		isWebcamPreviewDraggingRef,
 		webcamPreviewDragStartRef,
@@ -210,6 +214,21 @@ function LaunchWindowContent() {
 			formatTime={formatTime}
 		/>
 	);
+
+	useLaunchShortcuts({
+		launchShortcuts,
+		isMac,
+		isLaunchConfigOpen,
+		recording,
+		paused,
+		countdownActive,
+		hasSelectedSource,
+		platform,
+		toggleRecording,
+		pauseRecording,
+		resumeRecording,
+		openSources: () => requestOpen("sources"),
+	});
 
 	const idleControls = (
 		<>

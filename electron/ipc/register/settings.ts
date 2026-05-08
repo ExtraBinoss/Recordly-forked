@@ -1,7 +1,13 @@
 import fs from "node:fs/promises";
-import { app, ipcMain } from "electron";
+import { app, globalShortcut, ipcMain } from "electron";
 import { hideCursor } from "../../cursorHider";
-import { closeCountdownWindow, createCountdownWindow, getCountdownWindow } from "../../windows";
+import {
+	closeCountdownWindow,
+	createCountdownWindow,
+	getCountdownWindow,
+	getHudOverlayWindow,
+} from "../../windows";
+import type { LaunchShortcutAction, ShortcutBinding } from "../shortcutTypes";
 import {
 	COUNTDOWN_SETTINGS_FILE,
 	RECORDINGS_SETTINGS_FILE,
@@ -38,6 +44,36 @@ function getBrowserMicrophoneProfileFromEnv() {
 			: DEFAULT_BROWSER_MICROPHONE_PROFILE,
 		requestedBrowserMicrophoneProfile: requested,
 	};
+}
+
+let launchShortcutRegisteredAccelerators: string[] = [];
+
+function toElectronAccelerator(binding: ShortcutBinding): string | null {
+	const key = binding.key?.trim().toLowerCase();
+	if (!key) return null;
+	const mappedKey =
+		key === " " ? "Space" : key.length === 1 ? key.toUpperCase() : key.charAt(0).toUpperCase() + key.slice(1);
+	const parts: string[] = [];
+	if (binding.ctrl) parts.push("CommandOrControl");
+	if (binding.shift) parts.push("Shift");
+	if (binding.alt) parts.push("Alt");
+	parts.push(mappedKey);
+	return parts.join("+");
+}
+
+function unregisterLaunchGlobalShortcuts() {
+	for (const accelerator of launchShortcutRegisteredAccelerators) {
+		globalShortcut.unregister(accelerator);
+	}
+	launchShortcutRegisteredAccelerators = [];
+}
+
+function notifyLaunchShortcutTriggered(action: LaunchShortcutAction) {
+	const hud = getHudOverlayWindow();
+	if (!hud || hud.isDestroyed()) {
+		return;
+	}
+	hud.webContents.send("launch-shortcut-triggered", action);
 }
 
 export function registerSettingsHandlers() {
@@ -79,6 +115,39 @@ export function registerSettingsHandlers() {
       return { success: false, error: String(error) };
     }
   });
+
+	ipcMain.handle("register-launch-global-shortcuts", async (_, config: unknown) => {
+		try {
+			unregisterLaunchGlobalShortcuts();
+			if (!config || typeof config !== "object") {
+				return { success: true };
+			}
+
+			const entries = Object.entries(config as Record<string, ShortcutBinding>);
+			for (const [action, binding] of entries) {
+				const accelerator = toElectronAccelerator(binding);
+				if (!accelerator) continue;
+				const registered = globalShortcut.register(accelerator, () => {
+					notifyLaunchShortcutTriggered(action as LaunchShortcutAction);
+				});
+				if (registered) {
+					launchShortcutRegisteredAccelerators.push(accelerator);
+				}
+			}
+			return { success: true };
+		} catch (error) {
+			return { success: false, error: String(error) };
+		}
+	});
+
+	ipcMain.handle("unregister-launch-global-shortcuts", async () => {
+		try {
+			unregisterLaunchGlobalShortcuts();
+			return { success: true };
+		} catch (error) {
+			return { success: false, error: String(error) };
+		}
+	});
 
   // ---------------------------------------------------------------------------
   // Countdown timer before recording

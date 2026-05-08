@@ -8,10 +8,12 @@ import {
 	SunIcon,
 	MoonIcon,
 	DesktopIcon,
+	Keyboard,
 } from "@phosphor-icons/react";
 import type { ReactElement } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { useScopedT } from "@/contexts/I18nContext";
+import { useShortcuts } from "@/contexts/ShortcutsContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { AppLocale } from "@/i18n/config";
 import { SUPPORTED_LOCALES } from "@/i18n/config";
@@ -58,6 +60,7 @@ export function MorePopover({
 	const t = useScopedT("launch");
 	const { locale, setLocale } = useI18n();
 	const { preference, setPreference } = useTheme();
+	const { openLaunchConfig } = useShortcuts();
 	const { isOpen, requestOpen, requestClose } = useLaunchPopoverCoordinator();
 	const open = isOpen(POPOVER_ID);
 
@@ -111,6 +114,15 @@ export function MorePopover({
 				}}
 			>
 				{t("recording.openProject")}
+			</DropdownItem>
+			<DropdownItem
+				icon={<Keyboard size={16} />}
+				onClick={() => {
+					requestClose(POPOVER_ID);
+					openLaunchConfig();
+				}}
+			>
+				{t("recording.keyboardShortcuts", "Keyboard shortcuts")}
 			</DropdownItem>
 			{showDevUpdatePreview ? (
 				<DropdownItem
