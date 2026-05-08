@@ -123,6 +123,7 @@ export function registerSettingsHandlers() {
 				return { success: true };
 			}
 
+			const failedRegistrations: Array<{ action: LaunchShortcutAction; accelerator: string }> = [];
 			const entries = Object.entries(config as Record<string, ShortcutBinding>);
 			for (const [action, binding] of entries) {
 				const accelerator = toElectronAccelerator(binding);
@@ -132,9 +133,16 @@ export function registerSettingsHandlers() {
 				});
 				if (registered) {
 					launchShortcutRegisteredAccelerators.push(accelerator);
+				} else {
+					const failedRegistration = {
+						action: action as LaunchShortcutAction,
+						accelerator,
+					};
+					failedRegistrations.push(failedRegistration);
+					console.warn("Failed to register launch global shortcut:", failedRegistration);
 				}
 			}
-			return { success: true };
+			return { success: true, failedRegistrations };
 		} catch (error) {
 			return { success: false, error: String(error) };
 		}
