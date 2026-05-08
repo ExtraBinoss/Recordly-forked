@@ -43,7 +43,7 @@ import styles from "./LaunchWindow.module.css";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "../ui/button";
 import { RecordingControls } from "./RecordingControls";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const SHOW_DEV_UPDATE_PREVIEW = import.meta.env.DEV;
 
@@ -201,13 +201,16 @@ function LaunchWindowContent() {
 		ease: [0.22, 1, 0.36, 1] as const,
 	};
 
+	const toggleMicrophoneMute = useCallback(() => {
+		setMicrophoneEnabled((enabled) => !enabled);
+	}, [setMicrophoneEnabled]);
 
 	const recordingControls = (
 		<RecordingControls
 			paused={paused}
 			microphoneEnabled={microphoneEnabled}
 			elapsed={elapsed}
-			onToggleMicrophone={() => setMicrophoneEnabled(!microphoneEnabled)}
+			onToggleMicrophone={toggleMicrophoneMute}
 			onPauseResume={paused ? resumeRecording : pauseRecording}
 			onStopRecording={toggleRecording}
 			onHideHud={() => window.electronAPI?.hudOverlayHide?.()}
@@ -227,6 +230,7 @@ function LaunchWindowContent() {
 		toggleRecording,
 		pauseRecording,
 		resumeRecording,
+		toggleMicrophoneMute,
 		openSources: () => requestOpen("sources"),
 	});
 

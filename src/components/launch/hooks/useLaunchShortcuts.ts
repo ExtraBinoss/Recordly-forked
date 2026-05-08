@@ -17,6 +17,7 @@ interface UseLaunchShortcutsParams {
 	toggleRecording: () => void | Promise<void>;
 	pauseRecording: () => void;
 	resumeRecording: () => void;
+	toggleMicrophoneMute: () => void;
 	openSources: () => void;
 }
 
@@ -31,6 +32,7 @@ export function useLaunchShortcuts({
 	toggleRecording,
 	pauseRecording,
 	resumeRecording,
+	toggleMicrophoneMute,
 	openSources,
 }: UseLaunchShortcutsParams) {
 	const runLaunchShortcut = useCallback(
@@ -57,6 +59,7 @@ export function useLaunchShortcuts({
 					if (recording && paused) resumeRecording();
 					return;
 				case "muteMicrophone":
+					toggleMicrophoneMute();
 					return;
 				default:
 					return;
@@ -72,6 +75,7 @@ export function useLaunchShortcuts({
 			paused,
 			pauseRecording,
 			resumeRecording,
+			toggleMicrophoneMute,
 		],
 	);
 
@@ -98,16 +102,17 @@ export function useLaunchShortcuts({
 	}, [runLaunchShortcut]);
 
 	useEffect(() => {
-		if (!recording) {
-			void window.electronAPI?.unregisterLaunchGlobalShortcuts?.();
-			return;
-		}
-		void window.electronAPI?.registerLaunchGlobalShortcuts?.({
-			stopRecording: launchShortcuts.stopRecording,
-			pauseRecording: launchShortcuts.pauseRecording,
-			resumeRecording: launchShortcuts.resumeRecording,
-			muteMicrophone: launchShortcuts.muteMicrophone,
-		});
+		const shortcutsToRegister = recording
+			? {
+					stopRecording: launchShortcuts.stopRecording,
+					pauseRecording: launchShortcuts.pauseRecording,
+					resumeRecording: launchShortcuts.resumeRecording,
+					muteMicrophone: launchShortcuts.muteMicrophone,
+				}
+			: {
+					startRecording: launchShortcuts.startRecording,
+				};
+		void window.electronAPI?.registerLaunchGlobalShortcuts?.(shortcutsToRegister);
 		return () => {
 			void window.electronAPI?.unregisterLaunchGlobalShortcuts?.();
 		};

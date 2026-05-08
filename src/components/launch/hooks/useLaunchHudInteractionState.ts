@@ -23,8 +23,9 @@ export function useLaunchHudInteractionState({
 			return;
 		}
 
-		anyPopoverOpenRef.current = openId !== null;
-		if (openId !== null) {
+		const isOpen = openId !== null;
+		anyPopoverOpenRef.current = isOpen;
+		if (isOpen) {
 			window.electronAPI?.hudOverlaySetIgnoreMouse?.(false);
 		} else {
 			// Proactively check if we should ignore mouse when popover closes
