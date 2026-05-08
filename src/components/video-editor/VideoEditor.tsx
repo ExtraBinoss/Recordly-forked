@@ -3389,16 +3389,12 @@ export default function VideoEditor() {
 				speed: clip.speed as SpeedRegion["speed"],
 			}));
 		if (clipDerived.length === 0) return speedRegions;
-		const result = [...speedRegions];
-		for (const cs of clipDerived) {
-			const overlaps = speedRegions.some(
-				(sr) => sr.endMs > cs.startMs && sr.startMs < cs.endMs,
-			);
-			if (!overlaps) {
-				result.push(cs);
-			}
-		}
-		return result;
+		// Clip-level speed edits are the canonical source; drop overlapping
+		// legacy speed regions so clip speed changes always take effect.
+		const nonOverlappingLegacy = speedRegions.filter(
+			(sr) => !clipDerived.some((cs) => sr.endMs > cs.startMs && sr.startMs < cs.endMs),
+		);
+		return [...nonOverlappingLegacy, ...clipDerived];
 	}, [clipRegions, speedRegions]);
 
 	function togglePlayPause() {
@@ -3746,6 +3742,15 @@ export default function VideoEditor() {
 				setAnnotationRegions((prev) => removeTrimmedRegions(prev));
 				setSpeedRegions((prev) => removeTrimmedRegions(prev));
 				setAudioRegions((prev) => removeTrimmedRegions(prev));
+				setCursorTelemetry((prev) =>
+					prev.filter(
+						(point) =>
+							!removedSegments.some(
+								(segment) =>
+									point.timeMs >= segment.startMs && point.timeMs < segment.endMs,
+							),
+					),
+				);
 			}
 
 			setClipRegions((prev) =>
@@ -3823,6 +3828,12 @@ export default function VideoEditor() {
 					}));
 				setAnnotationRegions((prev) => remapRegions(prev));
 				setAudioRegions((prev) => remapRegions(prev));
+				setCursorTelemetry((prev) =>
+					prev.map((point) => ({
+						...point,
+						timeMs: remapTimelineTime(point.timeMs),
+					})),
+				);
 			}
 		},
 		[selectedClipId, clipRegions],
@@ -3855,6 +3866,9 @@ export default function VideoEditor() {
 				);
 				setAudioRegions((prev) =>
 					prev.filter((region) => region.endMs <= startMs || region.startMs >= endMs),
+				);
+				setCursorTelemetry((prev) =>
+					prev.filter((point) => point.timeMs < startMs || point.timeMs >= endMs),
 				);
 			}
 			if (selectedClipId === id) {

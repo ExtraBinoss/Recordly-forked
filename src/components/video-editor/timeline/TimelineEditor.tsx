@@ -2379,7 +2379,9 @@ const TimelineEditor = forwardRef<TimelineEditorHandle, TimelineEditorProps>(
 				>
 					<TimelineWrapper
 						range={clampedRange}
-						videoDuration={videoDuration}
+						// Use effective timeline duration (includes clip speed edits),
+						// otherwise drag/click end events can clamp spans back to source duration.
+						videoDuration={totalMs / 1000}
 						hasOverlap={hasOverlap}
 						onRangeChange={setRange}
 						minItemDurationMs={timelineScale.minItemDurationMs}
