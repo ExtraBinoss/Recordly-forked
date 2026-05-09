@@ -202,8 +202,8 @@ function LaunchWindowContent() {
 	};
 
 	const toggleMicrophoneMute = useCallback(() => {
-		setMicrophoneEnabled((enabled) => !enabled);
-	}, [setMicrophoneEnabled]);
+		setMicrophoneEnabled(!microphoneEnabled);
+	}, [microphoneEnabled, setMicrophoneEnabled]);
 
 	const recordingControls = (
 		<RecordingControls

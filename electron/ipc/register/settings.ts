@@ -64,12 +64,20 @@ const ELECTRON_KEY_MAP: Record<string, string> = {
 };
 
 function toElectronAccelerator(binding: ShortcutBinding): string | null {
-	const key = binding.key?.trim().toLowerCase();
+	const rawKey = binding.key;
+	if (rawKey === " ") {
+		const parts: string[] = [];
+		if (binding.ctrl) parts.push("CommandOrControl");
+		if (binding.shift) parts.push("Shift");
+		if (binding.alt) parts.push("Alt");
+		parts.push("Space");
+		return parts.join("+");
+	}
+
+	const key = rawKey?.trim().toLowerCase();
 	if (!key) return null;
 	let mappedKey: string;
-	if (key === " ") {
-		mappedKey = "Space";
-	} else if (ELECTRON_KEY_MAP[key]) {
+	if (ELECTRON_KEY_MAP[key]) {
 		mappedKey = ELECTRON_KEY_MAP[key];
 	} else if (key.length === 1) {
 		mappedKey = key.toUpperCase();
