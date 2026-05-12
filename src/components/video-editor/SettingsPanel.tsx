@@ -8,7 +8,6 @@ import {
 } from "@phosphor-icons/react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -20,30 +19,20 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useTheme } from "@/contexts/ThemeContext";
-import {
-	getAssetPath,
-	getRenderableAssetUrl,
-	getRenderableVideoUrl,
-	getWallpaperThumbnailUrl,
-} from "@/lib/assetPath";
+import { getRenderableVideoUrl } from "@/lib/assetPath";
 import {
 	TEMPORAL_MOTION_BLUR_DEFAULT_SAMPLE_COUNT,
 	TEMPORAL_MOTION_BLUR_DEFAULT_SHUTTER_FRACTION,
 } from "@/lib/exporter/temporalMotionBlur";
 import type { ExtensionSettingField } from "@/lib/extensions";
-import { extensionHost, type FrameInstance } from "@/lib/extensions";
+import { extensionHost } from "@/lib/extensions";
 import { cn } from "@/lib/utils";
-import type { BuiltInWallpaper } from "@/lib/wallpapers";
-import {
-	BUILT_IN_WALLPAPERS,
-	getAvailableWallpapers,
-	isVideoWallpaperSource,
-} from "@/lib/wallpapers";
+import { BUILT_IN_WALLPAPERS, isVideoWallpaperSource } from "@/lib/wallpapers";
 import { type AspectRatio } from "@/utils/aspectRatioUtils";
 import minimalCursorUrl from "@/assets/cursors/custom/minimal-cursor.svg";
 import { useI18n, useScopedT } from "../../contexts/I18nContext";
 import type { AppLocale } from "../../i18n/config";
-import { SUPPORTED_LOCALES } from "../../i18n/config";
+import { APP_LANGUAGE_LABELS, SUPPORTED_LOCALES } from "../../i18n/config";
 import { AnnotationSettingsPanel } from "./AnnotationSettingsPanel";
 import {
 	CURSOR_MOTION_PRESETS,
@@ -105,10 +94,19 @@ import {
 	normalizeWebcamCropRegion,
 	resolveWebcamCorner,
 } from "./webcamOverlay";
+import {
+	BUILTIN_CURSOR_PREVIEW_FRAME_SIZE,
+	BUILTIN_CURSOR_PREVIEW_SIZE,
+	BUILTIN_CURSOR_STYLE_OPTIONS,
+	CAPTION_ANIMATION_OPTIONS,
+	CAPTION_LANGUAGE_OPTIONS,
+	GRADIENTS,
+	WEBCAM_POSITION_PRESETS,
+	ZOOM_DEPTH_OPTIONS,
+} from "./settings/constants";
+import { useSettingsPanel } from "./settings/hooks/useSettingsPanel";
 
 const tahoeCursorUrl = cursorSetAssets.tahoe.arrow.url;
-const BUILTIN_CURSOR_PREVIEW_SIZE = 28;
-const BUILTIN_CURSOR_PREVIEW_FRAME_SIZE = 48;
 
 function getStepPrecision(step: number): number {
 	if (!Number.isFinite(step) || step <= 0) return 0;
@@ -119,59 +117,9 @@ function getStepPrecision(step: number): number {
 	return Math.min(12, precision);
 }
 
-const GRADIENTS = [
-	"linear-gradient( 111.6deg,  rgba(114,167,232,1) 9.4%, rgba(253,129,82,1) 43.9%, rgba(253,129,82,1) 54.8%, rgba(249,202,86,1) 86.3% )",
-	"linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%)",
-	"radial-gradient( circle farthest-corner at 3.2% 49.6%,  rgba(80,12,139,0.87) 0%, rgba(161,10,144,0.72) 83.6% )",
-	"linear-gradient( 111.6deg,  rgba(0,56,68,1) 0%, rgba(163,217,185,1) 51.5%, rgba(231, 148, 6, 1) 88.6% )",
-	"linear-gradient( 107.7deg,  rgba(235,230,44,0.55) 8.4%, rgba(252,152,15,1) 90.3% )",
-	"linear-gradient( 91deg,  rgba(72,154,78,1) 5.2%, rgba(251,206,70,1) 95.9% )",
-	"radial-gradient( circle farthest-corner at 10% 20%,  rgba(2,37,78,1) 0%, rgba(4,56,126,1) 19.7%, rgba(85,245,221,1) 100.2% )",
-	"linear-gradient( 109.6deg,  rgba(15,2,2,1) 11.2%, rgba(36,163,190,1) 91.1% )",
-	"linear-gradient(135deg, #FBC8B4, #2447B1)",
-	"linear-gradient(109.6deg, #F635A6, #36D860)",
-	"linear-gradient(90deg, #FF0101, #4DFF01)",
-	"linear-gradient(315deg, #EC0101, #5044A9)",
-	"linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)",
-	"linear-gradient(to top, #a18cd1 0%, #fbc2eb 100%)",
-	"linear-gradient(to right, #ff8177 0%, #ff867a 0%, #ff8c7f 21%, #f99185 52%, #cf556c 78%, #b12a5b 100%)",
-	"linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%)",
-	"linear-gradient(to right, #4facfe 0%, #00f2fe 100%)",
-	"linear-gradient(to top, #fcc5e4 0%, #fda34b 15%, #ff7882 35%, #c8699e 52%, #7046aa 71%, #0c1db8 87%, #020f75 100%)",
-	"linear-gradient(to right, #fa709a 0%, #fee140 100%)",
-	"linear-gradient(to top, #30cfd0 0%, #330867 100%)",
-	"linear-gradient(to top, #c471f5 0%, #fa71cd 100%)",
-	"linear-gradient(to right, #f78ca0 0%, #f9748f 19%, #fd868c 60%, #fe9a8b 100%)",
-	"linear-gradient(to top, #48c6ef 0%, #6f86d6 100%)",
-	"linear-gradient(to right, #0acffe 0%, #495aff 100%)",
-];
 
-const CAPTION_ANIMATION_OPTIONS: Array<{ value: AutoCaptionAnimation; label: string }> = [
-	{ value: "none", label: "Off" },
-	{ value: "fade", label: "Fade" },
-	{ value: "rise", label: "Rise" },
-	{ value: "pop", label: "Pop" },
-];
-
-type BackgroundTab = "image" | "video" | "color" | "gradient";
 function isHexWallpaper(value: string): boolean {
 	return /^#(?:[0-9a-f]{3}){1,2}$/i.test(value);
-}
-
-function getBackgroundTabForWallpaper(value: string): BackgroundTab {
-	if (GRADIENTS.includes(value)) {
-		return "gradient";
-	}
-
-	if (isHexWallpaper(value)) {
-		return "color";
-	}
-
-	if (isVideoWallpaperSource(value)) {
-		return "video";
-	}
-
-	return "image";
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -584,71 +532,6 @@ interface SettingsPanelProps {
 	onOpenNativeCaptureUnavailableModal?: () => void;
 }
 
-const ZOOM_DEPTH_OPTIONS: Array<{ depth: ZoomDepth; label: string }> = [
-	{ depth: 1, label: "1.25×" },
-	{ depth: 2, label: "1.5×" },
-	{ depth: 3, label: "1.8×" },
-	{ depth: 4, label: "2.2×" },
-	{ depth: 5, label: "3.5×" },
-	{ depth: 6, label: "5×" },
-];
-
-const WEBCAM_POSITION_PRESETS: Array<{
-	preset: Exclude<WebcamPositionPreset, "custom">;
-	label: string;
-}> = [
-	{ preset: "top-left", label: "↖" },
-	{ preset: "top-center", label: "↑" },
-	{ preset: "top-right", label: "↗" },
-	{ preset: "center-left", label: "←" },
-	{ preset: "center", label: "•" },
-	{ preset: "center-right", label: "→" },
-	{ preset: "bottom-left", label: "↙" },
-	{ preset: "bottom-center", label: "↓" },
-	{ preset: "bottom-right", label: "↘" },
-];
-
-type CursorStyleOption = { value: CursorStyle; label: string };
-
-type WallpaperTile = {
-	key: string;
-	label: string;
-	value: string;
-	previewUrl: string;
-};
-
-const BUILTIN_CURSOR_STYLE_OPTIONS: CursorStyleOption[] = [
-	{ value: "macos", label: "macOS" },
-	{ value: "tahoe", label: "Tahoe" },
-	{ value: "tahoe-inverted", label: "Tahoe Inverted" },
-	{ value: "dot", label: "Dot" },
-	{ value: "figma", label: "Minimal" },
-];
-
-const CAPTION_LANGUAGE_OPTIONS = [
-	{ value: "auto", label: "Auto Detect" },
-	{ value: "en", label: "English" },
-	{ value: "es", label: "Spanish" },
-	{ value: "fr", label: "French" },
-	{ value: "de", label: "German" },
-	{ value: "it", label: "Italian" },
-	{ value: "pt", label: "Portuguese" },
-	{ value: "zh", label: "Chinese (Simplified)" },
-	{ value: "ja", label: "Japanese" },
-	{ value: "ko", label: "Korean" },
-] as const;
-
-const APP_LANGUAGE_LABELS: Record<AppLocale, string> = {
-	en: "English",
-	es: "Español",
-	fr: "Français",
-	it: "Italiano",
-	nl: "Nederlands",
-	ko: "한국어",
-	"pt-BR": "Português",
-	"zh-CN": "簡體中文",
-	"zh-TW": "繁體中文",
-};
 
 function loadPreviewImage(url: string) {
 	return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -970,32 +853,46 @@ export function SettingsPanel({
 	const { locale, setLocale, t } = useI18n();
 	const { preference: themePreference, setPreference: setThemePreference } = useTheme();
 	const isBackgroundPanel = panelMode === "background";
-	const initialEditorPreferences = useMemo(() => loadEditorPreferences(), []);
-	const [builtInWallpapers, setBuiltInWallpapers] =
-		useState<BuiltInWallpaper[]>(BUILT_IN_WALLPAPERS);
-	const [extensionWallpapers, setExtensionWallpapers] = useState<
-		ReturnType<typeof extensionHost.getContributedWallpapers>
-	>([]);
-	const [wallpaperPreviewPaths, setWallpaperPreviewPaths] = useState<string[]>([]);
-	const [extensionWallpaperPreviewUrls, setExtensionWallpaperPreviewUrls] = useState<
-		Record<string, string>
-	>({});
-	const [customImages, setCustomImages] = useState<string[]>(
-		initialEditorPreferences.customWallpapers,
-	);
 	const removeBackgroundStateRef = useRef<{
 		aspectRatio: AspectRatio;
 		padding: Padding;
 	} | null>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
-	const builtInWallpaperPaths = useMemo(
-		() => builtInWallpapers.map((wallpaper) => wallpaper.publicPath),
-		[builtInWallpapers],
-	);
-	const extensionWallpaperPaths = useMemo(
-		() => extensionWallpapers.map((wallpaper) => wallpaper.resolvedUrl),
-		[extensionWallpapers],
-	);
+	const {
+		initialEditorPreferences,
+		customImages,
+		fileInputRef,
+		customColorInputRef,
+		builtInWallpaperPaths,
+		extensionWallpaperPaths,
+		backgroundTab,
+		setBackgroundTab,
+		selectedColor,
+		setSelectedColor,
+		gradient,
+		setGradient,
+		availableFrames,
+		extensionPanels,
+		cursorPreviewUrls,
+		cursorStyleOptions,
+		imageWallpaperTiles,
+		videoWallpaperTiles,
+		handleImageUpload,
+		handleVideoUpload,
+		handleRemoveCustomImage,
+	} = useSettingsPanel({
+		selected,
+		onWallpaperChange,
+		loadEditorPreferences,
+		saveEditorPreferences,
+		tSettings,
+		t,
+		gradients: GRADIENTS,
+		builtInCursorStyleOptions: BUILTIN_CURSOR_STYLE_OPTIONS,
+		createTrimmedSvgPreview,
+		createInvertedPreview,
+		minimalCursorUrl,
+		tahoeCursorUrl,
+	});
 	const captionCueCount = autoCaptions.length;
 	const updateAutoCaptionSettings = (partial: Partial<AutoCaptionSettings>) => {
 		onAutoCaptionSettingsChange?.({
@@ -1003,91 +900,6 @@ export function SettingsPanel({
 			...partial,
 		});
 	};
-
-	useEffect(() => {
-		let mounted = true;
-		(async () => {
-			try {
-				const availableWallpapers = await getAvailableWallpapers();
-				const resolved = await Promise.all(
-					availableWallpapers.map(async (wallpaper) => {
-						const assetUrl = await getAssetPath(wallpaper.relativePath);
-						// Use tiny thumbnails for the grid; full-res loads on selection
-						if (isVideoWallpaperSource(wallpaper.publicPath)) {
-							return getRenderableVideoUrl(assetUrl);
-						}
-						return getWallpaperThumbnailUrl(assetUrl);
-					}),
-				);
-				if (mounted) {
-					setBuiltInWallpapers(availableWallpapers);
-					setWallpaperPreviewPaths(resolved);
-				}
-			} catch {
-				if (mounted) {
-					setBuiltInWallpapers(BUILT_IN_WALLPAPERS);
-					setWallpaperPreviewPaths(
-						BUILT_IN_WALLPAPERS.map((wallpaper) => wallpaper.publicPath),
-					);
-				}
-			}
-		})();
-		return () => {
-			mounted = false;
-		};
-	}, []);
-
-	useEffect(() => {
-		let cancelled = false;
-
-		const updateExtensionAssets = async () => {
-			const wallpapers = extensionHost.getContributedWallpapers();
-			const cursorStyles = extensionHost.getContributedCursorStyles();
-			const [wallpaperPreviewEntries, cursorPreviewEntries] = await Promise.all([
-				Promise.all(
-					wallpapers.map(
-						async (wallpaper) =>
-							[
-								wallpaper.id,
-								isVideoWallpaperSource(wallpaper.resolvedThumbnailUrl)
-									? wallpaper.resolvedThumbnailUrl
-									: await getWallpaperThumbnailUrl(
-											wallpaper.resolvedThumbnailUrl,
-										),
-							] as const,
-					),
-				),
-				Promise.all(
-					cursorStyles.map(
-						async (cursorStyle) =>
-							[
-								cursorStyle.id,
-								await getRenderableAssetUrl(cursorStyle.resolvedDefaultUrl),
-							] as const,
-					),
-				),
-			]);
-
-			if (cancelled) {
-				return;
-			}
-
-			setExtensionWallpapers(wallpapers);
-			setExtensionWallpaperPreviewUrls(Object.fromEntries(wallpaperPreviewEntries));
-			setExtensionCursorStyles(cursorStyles);
-			setExtensionCursorPreviewUrls(Object.fromEntries(cursorPreviewEntries));
-		};
-
-		void extensionHost.autoActivateBuiltins().then(updateExtensionAssets);
-		const unsubscribe = extensionHost.onChange(() => {
-			void updateExtensionAssets();
-		});
-
-		return () => {
-			cancelled = true;
-			unsubscribe();
-		};
-	}, []);
 	const colorPalette = [
 		"#FF0000",
 		"#FFD700",
@@ -1107,31 +919,7 @@ export function SettingsPanel({
 		"#795548",
 	];
 
-	const [selectedColor, setSelectedColor] = useState(
-		isHexWallpaper(selected) ? selected : "#ADADAD",
-	);
-	const [gradient, setGradient] = useState<string>(
-		GRADIENTS.includes(selected) ? selected : GRADIENTS[0],
-	);
 	const removeBackgroundEnabled = aspectRatio === "native" && isZeroPadding(padding);
-
-	// Device frames from extension system
-	const [availableFrames, setAvailableFrames] = useState<FrameInstance[]>([]);
-	useEffect(() => {
-		const update = () => setAvailableFrames(extensionHost.getFrames());
-		update();
-		return extensionHost.onChange(update);
-	}, []);
-
-	// Extension-contributed settings panels
-	const [extensionPanels, setExtensionPanels] = useState<
-		ReturnType<typeof extensionHost.getSettingsPanels>
-	>([]);
-	useEffect(() => {
-		const update = () => setExtensionPanels(extensionHost.getSettingsPanels());
-		update();
-		return extensionHost.onChange(update);
-	}, []);
 
 	const renderExtensionPanelsForSections = (...sections: string[]) =>
 		extensionPanels
@@ -1148,169 +936,10 @@ export function SettingsPanel({
 				/>
 			));
 
-	const [backgroundTab, setBackgroundTab] = useState<BackgroundTab>(() =>
-		getBackgroundTabForWallpaper(selected),
-	);
-	const customColorInputRef = useRef<HTMLInputElement | null>(null);
 	const defaultWebcam = initialEditorPreferences.webcam;
 	const [internalActiveEffectSection] = useState<EditorEffectSection>("scene");
 	const activeEffectSection = activeEffectSectionProp ?? internalActiveEffectSection;
-	const [extensionCursorStyles, setExtensionCursorStyles] = useState<
-		ReturnType<typeof extensionHost.getContributedCursorStyles>
-	>([]);
-	const [builtInCursorPreviewUrls, setBuiltInCursorPreviewUrls] = useState<
-		Partial<Record<string, string>>
-	>({});
-	const [extensionCursorPreviewUrls, setExtensionCursorPreviewUrls] = useState<
-		Partial<Record<string, string>>
-	>({});
-	const cursorPreviewUrls = useMemo(
-		() => ({ ...builtInCursorPreviewUrls, ...extensionCursorPreviewUrls }),
-		[builtInCursorPreviewUrls, extensionCursorPreviewUrls],
-	);
 	const showDevMotionControls = import.meta.env.DEV;
-	const cursorStyleOptions = useMemo<CursorStyleOption[]>(
-		() => [
-			...BUILTIN_CURSOR_STYLE_OPTIONS,
-			...extensionCursorStyles.map((cursorStyle) => ({
-				value: cursorStyle.id as CursorStyle,
-				label: cursorStyle.cursorStyle.label,
-			})),
-		],
-		[extensionCursorStyles],
-	);
-
-	useEffect(() => {
-		let cancelled = false;
-
-		void (async () => {
-			try {
-				const macosPreview = cursorSetAssets.macos.arrow.url;
-				const tahoePreview = cursorSetAssets.tahoe.arrow.url;
-				const minimalPreview = await createTrimmedSvgPreview(minimalCursorUrl, 512);
-				const invertedPreview = await createInvertedPreview(tahoePreview);
-
-				if (!cancelled) {
-					setBuiltInCursorPreviewUrls({
-						macos: macosPreview,
-						tahoe: tahoePreview,
-						figma: minimalPreview,
-						"tahoe-inverted": invertedPreview,
-					});
-				}
-			} catch {
-				if (!cancelled) {
-					setBuiltInCursorPreviewUrls({
-						macos: tahoeCursorUrl,
-						tahoe: tahoeCursorUrl,
-						figma: minimalCursorUrl,
-						"tahoe-inverted": tahoeCursorUrl,
-					});
-				}
-			}
-		})();
-
-		return () => {
-			cancelled = true;
-		};
-	}, []);
-
-	useEffect(() => {
-		setBackgroundTab(getBackgroundTabForWallpaper(selected));
-
-		if (isHexWallpaper(selected)) {
-			setSelectedColor(selected);
-		}
-
-		if (GRADIENTS.includes(selected)) {
-			setGradient(selected);
-		}
-	}, [selected]);
-
-	useEffect(() => {
-		if (selected.startsWith("data:image")) {
-			setCustomImages((prev) => (prev.includes(selected) ? prev : [selected, ...prev]));
-			return;
-		}
-
-		const isKnownWallpaper =
-			builtInWallpaperPaths.includes(selected) ||
-			wallpaperPreviewPaths.includes(selected) ||
-			extensionWallpaperPaths.includes(selected);
-
-		if (!isKnownWallpaper && isVideoWallpaperSource(selected)) {
-			setCustomImages((prev) => (prev.includes(selected) ? prev : [selected, ...prev]));
-		}
-	}, [
-		builtInWallpaperPaths,
-		extensionWallpaperPaths,
-		selected,
-		wallpaperPreviewPaths,
-	]);
-
-	const imageWallpaperTiles = useMemo<WallpaperTile[]>(() => {
-		const imageWallpapers = builtInWallpapers.filter(
-			(wallpaper) => !isVideoWallpaperSource(wallpaper.publicPath),
-		);
-		const builtInTiles = (
-			wallpaperPreviewPaths.length > 0 ? wallpaperPreviewPaths : builtInWallpaperPaths
-		)
-			.filter((path) => !isVideoWallpaperSource(path))
-			.map((previewPath, index) => {
-				const wallpaper = imageWallpapers[index];
-				return {
-					key: wallpaper ? `builtin/${wallpaper.id}` : previewPath,
-					label: wallpaper?.label ?? `Wallpaper ${index + 1}`,
-					value: wallpaper?.publicPath ?? previewPath,
-					previewUrl: previewPath,
-				};
-			});
-
-		const extensionTiles = extensionWallpapers
-			.filter((wallpaper) => !isVideoWallpaperSource(wallpaper.resolvedUrl))
-			.map((wallpaper) => ({
-				key: wallpaper.id,
-				label: wallpaper.wallpaper.label,
-				value: wallpaper.resolvedUrl,
-				previewUrl:
-					extensionWallpaperPreviewUrls[wallpaper.id] ?? wallpaper.resolvedThumbnailUrl,
-			}));
-
-		return [...builtInTiles, ...extensionTiles];
-	}, [
-		builtInWallpaperPaths,
-		builtInWallpapers,
-		extensionWallpaperPreviewUrls,
-		extensionWallpapers,
-		wallpaperPreviewPaths,
-	]);
-
-	const videoWallpaperTiles = useMemo<WallpaperTile[]>(() => {
-		const builtInTiles = builtInWallpapers
-			.filter((wallpaper) => isVideoWallpaperSource(wallpaper.publicPath))
-			.map((wallpaper) => ({
-				key: `builtin/${wallpaper.id}`,
-				label: wallpaper.label,
-				value: wallpaper.publicPath,
-				previewUrl: wallpaper.publicPath,
-			}));
-
-		const extensionTiles = extensionWallpapers
-			.filter((wallpaper) => isVideoWallpaperSource(wallpaper.resolvedUrl))
-			.map((wallpaper) => ({
-				key: wallpaper.id,
-				label: wallpaper.wallpaper.label,
-				value: wallpaper.resolvedUrl,
-				previewUrl:
-					extensionWallpaperPreviewUrls[wallpaper.id] ?? wallpaper.resolvedThumbnailUrl,
-			}));
-
-		return [...builtInTiles, ...extensionTiles];
-	}, [builtInWallpapers, extensionWallpaperPreviewUrls, extensionWallpapers]);
-
-	useEffect(() => {
-		saveEditorPreferences({ customWallpapers: customImages });
-	}, [customImages]);
 
 	const handleRemoveBackgroundToggle = (checked: boolean) => {
 		if (checked) {
@@ -1495,7 +1124,8 @@ export function SettingsPanel({
 			(preferredWallpaper && extensionWallpaperPaths.includes(preferredWallpaper)) ||
 			(preferredWallpaper && customImages.includes(preferredWallpaper)) ||
 			(preferredWallpaper && isHexWallpaper(preferredWallpaper)) ||
-			(preferredWallpaper && GRADIENTS.includes(preferredWallpaper));
+			(preferredWallpaper &&
+				GRADIENTS.some((gradientValue) => gradientValue === preferredWallpaper));
 
 		onWallpaperChange(
 			(hasPreferredWallpaper ? preferredWallpaper : "") ||
@@ -1625,77 +1255,6 @@ export function SettingsPanel({
 			positionY: position.y,
 			corner: resolveWebcamCorner(preset, webcam.corner),
 		});
-	};
-
-	const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const files = event.target.files;
-		if (!files || files.length === 0) return;
-
-		const file = files[0];
-
-		// Validate file type - only allow JPG/JPEG
-		const validTypes = ["image/jpeg", "image/jpg"];
-		if (!validTypes.includes(file.type)) {
-			toast.error(tSettings("background.uploadError"), {
-				description: tSettings("background.uploadErrorDescription"),
-			});
-			event.target.value = "";
-			return;
-		}
-
-		const reader = new FileReader();
-
-		reader.onload = (e) => {
-			const dataUrl = e.target?.result as string;
-			if (dataUrl) {
-				setCustomImages((prev) => [...prev, dataUrl]);
-				onWallpaperChange(dataUrl);
-				toast.success(tSettings("background.uploadSuccess"));
-			}
-		};
-
-		reader.onerror = () => {
-			toast.error(t("common.errors.failedToUploadImage"), {
-				description: t("common.errors.fileReadError"),
-			});
-		};
-
-		reader.readAsDataURL(file);
-		// Reset input so the same file can be selected again
-		event.target.value = "";
-	};
-
-	const handleVideoUpload = async () => {
-		try {
-			const result = await window.electronAPI.openVideoFilePicker();
-			if (!result?.success || !result.path) return;
-			const filePath = result.path;
-			if (!isVideoWallpaperSource(filePath)) {
-				toast.error("Unsupported format", {
-					description: "Please select a video file (mp4, webm, mov, etc.)",
-				});
-				return;
-			}
-			setCustomImages((prev) => [filePath, ...prev]);
-			onWallpaperChange(filePath);
-			toast.success("Video background added");
-		} catch {
-			toast.error("Failed to import video background");
-		}
-	};
-
-	const handleRemoveCustomImage = (imageUrl: string, event: React.MouseEvent) => {
-		event.stopPropagation();
-		setCustomImages((prev) => prev.filter((img) => img !== imageUrl));
-		// If the removed image was selected, clear selection
-		if (selected === imageUrl) {
-			onWallpaperChange(
-				builtInWallpaperPaths[0] ??
-					extensionWallpaperPaths[0] ??
-					BUILT_IN_WALLPAPERS[0]?.publicPath ??
-					"",
-			);
-		}
 	};
 
 	// Find selected annotation
