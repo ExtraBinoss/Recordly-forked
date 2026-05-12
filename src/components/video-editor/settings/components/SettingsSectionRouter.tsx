@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { memo, type ComponentProps, type ReactNode } from "react";
 import { AudioSection } from "../sections/AudioSection";
 import { BackgroundSection } from "../sections/BackgroundSection";
 import { CaptionsSection } from "../sections/CaptionsSection";
@@ -39,7 +39,7 @@ interface SettingsSectionRouterProps {
 	generalSettingsProps: ComponentProps<typeof GeneralSettingsSection>;
 }
 
-export function SettingsSectionRouter({
+export const SettingsSectionRouter = memo(({
 	activeEffectSection,
 	extensionPanels,
 	backgroundProps,
@@ -52,7 +52,7 @@ export function SettingsSectionRouter({
 	cursorProps,
 	webcamProps,
 	generalSettingsProps,
-}: SettingsSectionRouterProps) {
+}: SettingsSectionRouterProps) => {
 	const sceneSectionContent = (
 		<div className="space-y-4">
 			<BackgroundSection {...backgroundProps} />
@@ -108,4 +108,6 @@ export function SettingsSectionRouter({
 			return sceneSectionContent;
 		}
 	}
-}
+});
+
+SettingsSectionRouter.displayName = "SettingsSectionRouter";

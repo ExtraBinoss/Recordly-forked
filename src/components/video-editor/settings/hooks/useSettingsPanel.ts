@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	getAssetPath,
@@ -61,10 +61,43 @@ export function useSettingsPanel({
 	tahoeCursorUrl,
 }: UseSettingsPanelArgs) {
 	const initialEditorPreferences = useMemo(() => loadEditorPreferences(), [loadEditorPreferences]);
-	const [builtInWallpapers, setBuiltInWallpapers] = useState<BuiltInWallpaper[]>(BUILT_IN_WALLPAPERS);
-	const [extensionWallpapers, setExtensionWallpapers] = useState<ReturnType<typeof extensionHost.getContributedWallpapers>>([]);
-	const [wallpaperPreviewPaths, setWallpaperPreviewPaths] = useState<string[]>([]);
-	const [extensionWallpaperPreviewUrls, setExtensionWallpaperPreviewUrls] = useState<Record<string, string>>({});
+	const [assets, setAssets] = useState<{
+		builtInWallpapers: BuiltInWallpaper[];
+		extensionWallpapers: ReturnType<typeof extensionHost.getContributedWallpapers>;
+		wallpaperPreviewPaths: string[];
+		extensionWallpaperPreviewUrls: Record<string, string>;
+		availableFrames: FrameInstance[];
+		extensionPanels: ReturnType<typeof extensionHost.getSettingsPanels>;
+		extensionCursorStyles: ReturnType<typeof extensionHost.getContributedCursorStyles>;
+		builtInCursorPreviewUrls: Partial<Record<string, string>>;
+		extensionCursorPreviewUrls: Partial<Record<string, string>>;
+		isInitialLoading: boolean;
+	}>({
+		builtInWallpapers: BUILT_IN_WALLPAPERS,
+		extensionWallpapers: [],
+		wallpaperPreviewPaths: [],
+		extensionWallpaperPreviewUrls: {},
+		availableFrames: [],
+		extensionPanels: [],
+		extensionCursorStyles: [],
+		builtInCursorPreviewUrls: {},
+		extensionCursorPreviewUrls: {},
+		isInitialLoading: true,
+	});
+
+	const {
+		builtInWallpapers,
+		extensionWallpapers,
+		wallpaperPreviewPaths,
+		extensionWallpaperPreviewUrls,
+		availableFrames,
+		extensionPanels,
+		extensionCursorStyles,
+		builtInCursorPreviewUrls,
+		extensionCursorPreviewUrls,
+		isInitialLoading,
+	} = assets;
+
 	const [customImages, setCustomImages] = useState<string[]>(initialEditorPreferences.customWallpapers);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const customColorInputRef = useRef<HTMLInputElement | null>(null);
@@ -73,11 +106,6 @@ export function useSettingsPanel({
 	const [gradient, setGradient] = useState<string>(
 		gradients.some((gradientValue) => gradientValue === selected) ? selected : gradients[0],
 	);
-	const [availableFrames, setAvailableFrames] = useState<FrameInstance[]>([]);
-	const [extensionPanels, setExtensionPanels] = useState<ReturnType<typeof extensionHost.getSettingsPanels>>([]);
-	const [extensionCursorStyles, setExtensionCursorStyles] = useState<ReturnType<typeof extensionHost.getContributedCursorStyles>>([]);
-	const [builtInCursorPreviewUrls, setBuiltInCursorPreviewUrls] = useState<Partial<Record<string, string>>>({});
-	const [extensionCursorPreviewUrls, setExtensionCursorPreviewUrls] = useState<Partial<Record<string, string>>>({});
 
 	const builtInWallpaperPaths = useMemo(
 		() => builtInWallpapers.map((wallpaper) => wallpaper.publicPath),
@@ -177,15 +205,21 @@ export function useSettingsPanel({
 					}),
 				);
 				if (mounted) {
-					setBuiltInWallpapers(availableWallpapers);
-					setWallpaperPreviewPaths(resolved);
+					setAssets(prev => ({
+						...prev,
+						builtInWallpapers: availableWallpapers,
+						wallpaperPreviewPaths: resolved,
+						isInitialLoading: false,
+					}));
 				}
 			} catch {
 				if (mounted) {
-					setBuiltInWallpapers(BUILT_IN_WALLPAPERS);
-					setWallpaperPreviewPaths(
-						BUILT_IN_WALLPAPERS.map((wallpaper) => wallpaper.publicPath),
-					);
+					setAssets(prev => ({
+						...prev,
+						builtInWallpapers: BUILT_IN_WALLPAPERS,
+						wallpaperPreviewPaths: BUILT_IN_WALLPAPERS.map((wallpaper) => wallpaper.publicPath),
+						isInitialLoading: false,
+					}));
 				}
 			}
 		})();
@@ -227,10 +261,15 @@ export function useSettingsPanel({
 				return;
 			}
 
-			setExtensionWallpapers(wallpapers);
-			setExtensionWallpaperPreviewUrls(Object.fromEntries(wallpaperPreviewEntries));
-			setExtensionCursorStyles(cursorStyles);
-			setExtensionCursorPreviewUrls(Object.fromEntries(cursorPreviewEntries));
+			setAssets(prev => ({
+				...prev,
+				extensionWallpapers: wallpapers,
+				extensionWallpaperPreviewUrls: Object.fromEntries(wallpaperPreviewEntries),
+				extensionCursorStyles: cursorStyles,
+				extensionCursorPreviewUrls: Object.fromEntries(cursorPreviewEntries),
+				availableFrames: extensionHost.getFrames(),
+				extensionPanels: extensionHost.getSettingsPanels(),
+			}));
 		};
 
 		void extensionHost.autoActivateBuiltins().then(updateExtensionAssets);
@@ -245,18 +284,6 @@ export function useSettingsPanel({
 	}, []);
 
 	useEffect(() => {
-		const update = () => setAvailableFrames(extensionHost.getFrames());
-		update();
-		return extensionHost.onChange(update);
-	}, []);
-
-	useEffect(() => {
-		const update = () => setExtensionPanels(extensionHost.getSettingsPanels());
-		update();
-		return extensionHost.onChange(update);
-	}, []);
-
-	useEffect(() => {
 		let cancelled = false;
 
 		void (async () => {
@@ -268,21 +295,27 @@ export function useSettingsPanel({
 				const invertedPreview = await createInvertedPreview(tahoePreview);
 
 				if (!cancelled) {
-					setBuiltInCursorPreviewUrls({
-						macos: macosPreview,
-						tahoe: tahoePreview,
-						figma: minimalPreview,
-						"tahoe-inverted": invertedPreview,
-					});
+					setAssets(prev => ({
+						...prev,
+						builtInCursorPreviewUrls: {
+							macos: macosPreview,
+							tahoe: tahoePreview,
+							figma: minimalPreview,
+							"tahoe-inverted": invertedPreview,
+						}
+					}));
 				}
 			} catch {
 				if (!cancelled) {
-					setBuiltInCursorPreviewUrls({
-						macos: tahoeCursorUrl,
-						tahoe: tahoeCursorUrl,
-						figma: minimalCursorUrl,
-						"tahoe-inverted": tahoeCursorUrl,
-					});
+					setAssets(prev => ({
+						...prev,
+						builtInCursorPreviewUrls: {
+							macos: tahoeCursorUrl,
+							tahoe: tahoeCursorUrl,
+							figma: minimalCursorUrl,
+							"tahoe-inverted": tahoeCursorUrl,
+						}
+					}));
 				}
 			}
 		})();
@@ -329,7 +362,7 @@ export function useSettingsPanel({
 		saveEditorPreferences({ customWallpapers: customImages });
 	}, [customImages, saveEditorPreferences]);
 
-	const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
 		const files = event.target.files;
 		if (!files || files.length === 0) return;
 
@@ -361,9 +394,9 @@ export function useSettingsPanel({
 
 		reader.readAsDataURL(file);
 		event.target.value = "";
-	};
+	}, [onWallpaperChange, t, tSettings]);
 
-	const handleVideoUpload = async () => {
+	const handleVideoUpload = useCallback(async () => {
 		try {
 			const result = await window.electronAPI.openVideoFilePicker();
 			if (!result?.success || !result.path) return;
@@ -380,9 +413,9 @@ export function useSettingsPanel({
 		} catch {
 			toast.error("Failed to import video background");
 		}
-	};
+	}, [onWallpaperChange]);
 
-	const handleRemoveCustomImage = (imageUrl: string, event: React.MouseEvent) => {
+	const handleRemoveCustomImage = useCallback((imageUrl: string, event: React.MouseEvent) => {
 		event.stopPropagation();
 		setCustomImages((prev) => prev.filter((img) => img !== imageUrl));
 		if (selected === imageUrl) {
@@ -393,9 +426,10 @@ export function useSettingsPanel({
 					"",
 			);
 		}
-	};
+	}, [builtInWallpaperPaths, extensionWallpaperPaths, onWallpaperChange, selected]);
 
 	return {
+		isInitialLoading,
 		initialEditorPreferences,
 		customImages,
 		fileInputRef,

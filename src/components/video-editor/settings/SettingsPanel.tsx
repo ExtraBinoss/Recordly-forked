@@ -1,5 +1,5 @@
 import { Palette } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import minimalCursorUrl from "@/assets/cursors/custom/minimal-cursor.svg";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n, useScopedT } from "../../../contexts/I18nContext";
@@ -178,6 +178,7 @@ export function SettingsPanel({
 		handleImageUpload,
 		handleVideoUpload,
 		handleRemoveCustomImage,
+		isInitialLoading,
 	} = useSettingsPanel({
 		selected,
 		onWallpaperChange,
@@ -202,7 +203,7 @@ export function SettingsPanel({
 		? annotationRegions.find((a) => a.id === selectedAnnotationId)
 		: null;
 
-	const backgroundSettingsContent = (
+	const backgroundSettingsContent = useMemo(() => (
 		<BackgroundSection
 			tSettings={tSettings}
 			t={t}
@@ -227,8 +228,34 @@ export function SettingsPanel({
 			initialEditorPreferences={initialEditorPreferences}
 			builtInWallpaperPaths={builtInWallpaperPaths}
 			extensionWallpaperPaths={extensionWallpaperPaths}
+			isInitialLoading={isInitialLoading}
 		/>
-	);
+	), [
+		tSettings,
+		t,
+		selected,
+		onWallpaperChange,
+		backgroundBlur,
+		onBackgroundBlurChange,
+		backgroundTab,
+		setBackgroundTab,
+		fileInputRef,
+		handleImageUpload,
+		customImages,
+		imageWallpaperTiles,
+		videoWallpaperTiles,
+		handleVideoUpload,
+		handleRemoveCustomImage,
+		customColorInputRef,
+		selectedColor,
+		setSelectedColor,
+		gradient,
+		setGradient,
+		initialEditorPreferences,
+		builtInWallpaperPaths,
+		extensionWallpaperPaths,
+		isInitialLoading,
+	]);
 
 	// If an annotation is selected, show annotation settings instead
 	if (
