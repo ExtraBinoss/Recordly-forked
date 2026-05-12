@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { FrameInstance } from "@/lib/extensions";
 import { cn } from "@/lib/utils";
 import { type AspectRatio } from "@/utils/aspectRatioUtils";
@@ -23,6 +24,7 @@ export function FrameSection({
 	frame,
 	onFrameChange,
 	initialEditorPreferences,
+	isInitialLoading = false,
 }: {
 	tSettings: (key: string, fallback?: string) => string;
 	t: (key: string, fallback?: string) => string;
@@ -38,6 +40,7 @@ export function FrameSection({
 	frame?: string | null;
 	onFrameChange?: (frameId: string | null) => void;
 	initialEditorPreferences: EditorPreferences;
+	isInitialLoading?: boolean;
 }) {
 	const removeBackgroundStateRef = useRef<{ aspectRatio: AspectRatio; padding: Padding } | null>(
 		null,
@@ -113,8 +116,33 @@ export function FrameSection({
 		onPaddingChange?.({ ...DEFAULT_PADDING });
 	};
 
+	if (isInitialLoading) {
+		return (
+			<section className="flex flex-col gap-2 animate-in fade-in duration-200">
+				<div className="flex items-center justify-between gap-3">
+					<Skeleton className="h-3 w-16" variant="subtle" />
+					<Skeleton className="h-3 w-10" variant="subtle" />
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<Skeleton className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<Skeleton className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<div className="flex flex-col gap-1.5 pt-0.5">
+						<Skeleton className="h-3 w-14 mb-1" variant="subtle" />
+						<Skeleton className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					</div>
+					<Skeleton className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<div className="grid grid-cols-3 gap-1.5 mt-1">
+						{[...Array(3)].map((_, i) => (
+							<Skeleton key={i} className="h-16 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+						))}
+					</div>
+				</div>
+			</section>
+		);
+	}
+
 	return (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-2 animate-in fade-in duration-300">
 			<div className="flex items-center justify-between gap-3">
 				<p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
 					{tSettings("sections.frame", "Frame")}

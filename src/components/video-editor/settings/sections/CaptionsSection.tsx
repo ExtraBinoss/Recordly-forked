@@ -7,6 +7,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SliderControl } from "../../SliderControl";
 import type { AutoCaptionAnimation, AutoCaptionSettings } from "../../types";
 import { CAPTION_ANIMATION_OPTIONS, CAPTION_LANGUAGE_OPTIONS } from "../constants";
@@ -29,6 +30,7 @@ export function CaptionsSection({
 	isGeneratingCaptions,
 	captionCueCount,
 	extensionPanels,
+	isInitialLoading = false,
 }: {
 	tSettings: (key: string, fallback?: string) => string;
 	t: (key: string, fallback?: string) => string;
@@ -46,11 +48,37 @@ export function CaptionsSection({
 	isGeneratingCaptions: boolean;
 	captionCueCount: number;
 	extensionPanels: SettingsPanelExtension[];
+	isInitialLoading?: boolean;
 }) {
 	const update = (partial: Partial<AutoCaptionSettings>) =>
 		onAutoCaptionSettingsChange?.({ ...autoCaptionSettings, ...partial });
+
+	if (isInitialLoading) {
+		return (
+			<section className="flex flex-col gap-2 animate-in fade-in duration-200">
+				<div className="flex items-center justify-between gap-3">
+					<Skeleton className="h-3 w-16" variant="subtle" />
+					<Skeleton className="h-4 w-10 rounded-full" variant="subtle" />
+				</div>
+				<div className="rounded-lg bg-foreground/[0.03] px-2.5 py-3 space-y-3">
+					<Skeleton className="h-10 w-full rounded-xl" variant="subtle" animation="shimmer-premium" />
+					<div className="flex items-center justify-between">
+						<Skeleton className="h-3 w-14" variant="subtle" />
+						<Skeleton className="h-10 w-32 rounded-xl" variant="subtle" animation="shimmer-premium" />
+					</div>
+					<Skeleton className="h-10 w-full rounded-xl" variant="subtle" animation="shimmer-premium" />
+				</div>
+				<SettingsExtensionPanels
+					panels={extensionPanels}
+					sections={["captions"]}
+					isInitialLoading={true}
+				/>
+			</section>
+		);
+	}
+
 	return (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-2 animate-in fade-in duration-300">
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex items-center gap-3">
 					<p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">

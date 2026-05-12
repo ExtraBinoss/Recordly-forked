@@ -37,6 +37,7 @@ interface SettingsSectionRouterProps {
 	cursorProps: ComponentProps<typeof CursorSection>;
 	webcamProps: ComponentProps<typeof WebcamSection>;
 	generalSettingsProps: ComponentProps<typeof GeneralSettingsSection>;
+	isInitialLoading?: boolean;
 }
 
 export const SettingsSectionRouter = memo(({
@@ -52,8 +53,9 @@ export const SettingsSectionRouter = memo(({
 	cursorProps,
 	webcamProps,
 	generalSettingsProps,
+	isInitialLoading = false,
 }: SettingsSectionRouterProps) => {
-	const sceneSectionContent = (
+	const renderSceneSection = () => (
 		<div className="space-y-4">
 			<BackgroundSection {...backgroundProps} />
 			<FrameSection {...frameProps} />
@@ -61,6 +63,7 @@ export const SettingsSectionRouter = memo(({
 			<SettingsExtensionPanels
 				panels={extensionPanels}
 				sections={["scene", "appearance", "frame", "crop"]}
+				isInitialLoading={isInitialLoading}
 			/>
 		</div>
 	);
@@ -71,7 +74,7 @@ export const SettingsSectionRouter = memo(({
 		case "scene":
 		case "frame":
 		case "crop":
-			return sceneSectionContent;
+			return renderSceneSection();
 		case "zoom":
 			return <ZoomSection {...zoomProps} />;
 		case "clip":
@@ -100,12 +103,13 @@ export const SettingsSectionRouter = memo(({
 								extensionId={p.extensionId}
 								label={p.panel.label}
 								fields={p.panel.fields}
+								isInitialLoading={isInitialLoading}
 							/>
 						</section>
 					);
 				}
 			}
-			return sceneSectionContent;
+			return renderSceneSection();
 		}
 	}
 });

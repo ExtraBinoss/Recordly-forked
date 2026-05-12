@@ -1,4 +1,5 @@
 import { SliderControl } from "../../SliderControl";
+import { Skeleton } from "@/components/ui/skeleton";
 import { type CropRegion, DEFAULT_CROP_REGION } from "../../types";
 
 export function CropSection({
@@ -6,11 +7,13 @@ export function CropSection({
 	t,
 	cropRegion,
 	onCropChange,
+	isInitialLoading = false,
 }: {
 	tSettings: (key: string, fallback?: string) => string;
 	t: (key: string, fallback?: string) => string;
 	cropRegion?: CropRegion;
 	onCropChange?: (region: CropRegion) => void;
+	isInitialLoading?: boolean;
 }) {
 	const crop = cropRegion ?? DEFAULT_CROP_REGION;
 	const cropTop = Math.round(crop.y * 100);
@@ -48,8 +51,23 @@ export function CropSection({
 		onCropChange({ x, y, width, height });
 	};
 
+	if (isInitialLoading) {
+		return (
+			<section className="flex flex-col gap-2 animate-in fade-in duration-200">
+				<div className="flex items-center justify-between gap-3">
+					<Skeleton className="h-3 w-12" variant="subtle" />
+				</div>
+				<div className="flex flex-col gap-1.5">
+					{[...Array(4)].map((_, i) => (
+						<Skeleton key={i} className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					))}
+				</div>
+			</section>
+		);
+	}
+
 	return (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-2 animate-in fade-in duration-300">
 			<div className="flex items-center justify-between gap-3">
 				<p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
 					{tSettings("sections.crop", "Crop")}

@@ -20,6 +20,7 @@ import type { EditorPreferences } from "../../editorPreferences";
 import { SliderControl } from "../../SliderControl";
 import { KeyboardShortcutsDialog } from "../../TutorialHelp";
 import type { ZoomMotionBlurTuning } from "../../types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
 	return (
@@ -132,6 +133,7 @@ export function GeneralSettingsSection({
 	onCursorSpringDampingMultiplierChange,
 	cursorSpringMassMultiplier,
 	onCursorSpringMassMultiplierChange,
+	isInitialLoading = false,
 }: {
 	t: (key: string, fallback?: string) => string;
 	tSettings: (key: string, fallback?: string) => string;
@@ -175,6 +177,7 @@ export function GeneralSettingsSection({
 	onCursorSpringDampingMultiplierChange?: (multiplier: number) => void;
 	cursorSpringMassMultiplier: number;
 	onCursorSpringMassMultiplierChange?: (multiplier: number) => void;
+	isInitialLoading?: boolean;
 }) {
 	const activeMotionPresetId =
 		getMatchingCursorMotionPresetId({
@@ -204,8 +207,30 @@ export function GeneralSettingsSection({
 		onCursorClickBounceDurationChange?.(preset.cursorClickBounceDuration);
 	};
 
+	if (isInitialLoading) {
+		return (
+			<div className="space-y-4 animate-in fade-in duration-200">
+				<section className="flex flex-col gap-2">
+					<Skeleton className="h-3 w-20" variant="subtle" />
+					<Skeleton className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+				</section>
+				<section className="flex flex-col gap-2">
+					<Skeleton className="h-3 w-24" variant="subtle" />
+					<Skeleton className="h-10 w-full rounded-xl" variant="subtle" animation="shimmer-premium" />
+				</section>
+				<section className="flex flex-col gap-1.5">
+					<Skeleton className="h-16 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<Skeleton className="h-16 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+				</section>
+				<section className="flex flex-col gap-2">
+					<Skeleton className="h-32 w-full rounded-xl" variant="subtle" animation="shimmer-premium" />
+				</section>
+			</div>
+		);
+	}
+
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4 animate-in fade-in duration-300">
 			<section className="flex flex-col gap-2">
 				<SectionLabel>{t("editor.theme.appearance", "Appearance")}</SectionLabel>
 				<div className="flex rounded-lg border border-foreground/10 bg-foreground/5 p-0.5">

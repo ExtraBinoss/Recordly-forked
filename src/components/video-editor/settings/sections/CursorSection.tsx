@@ -1,6 +1,8 @@
+import { memo, useEffect, useState, useTransition } from "react";
 import minimalCursorUrl from "@/assets/cursors/custom/minimal-cursor.svg";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { EditorPreferences } from "../../editorPreferences";
 import { SliderControl } from "../../SliderControl";
@@ -26,13 +28,15 @@ import { SettingsExtensionPanels, type SettingsPanelExtension } from "./Extensio
 
 const tahoeCursorUrl = cursorSetAssets.tahoe.arrow.url;
 
-function CursorStylePreview({
+const CursorStylePreview = memo(({
 	style,
 	previewUrls,
 }: {
 	style: CursorStyle;
 	previewUrls: Partial<Record<string, string>>;
-}) {
+}) => {
+	const [isLoaded, setIsLoaded] = useState(false);
+	
 	const previewSrc =
 		style === "macos"
 			? (previewUrls.macos ?? tahoeCursorUrl)
@@ -48,16 +52,21 @@ function CursorStylePreview({
 		const previewSize = BUILTIN_CURSOR_PREVIEW_SIZE * getCursorStyleSizeMultiplier(style);
 		return (
 			<div
-				className="flex items-center justify-center"
+				className="flex items-center justify-center relative"
 				style={{
 					width: `${BUILTIN_CURSOR_PREVIEW_FRAME_SIZE}px`,
 					height: `${BUILTIN_CURSOR_PREVIEW_FRAME_SIZE}px`,
 				}}
 			>
+				{!isLoaded && <Skeleton className="absolute inset-0 rounded-full scale-50" variant="glass" animation="shimmer-premium" />}
 				<img
 					src={previewSrc ?? tahoeCursorUrl}
+					onLoad={() => setIsLoaded(true)}
 					alt=""
-					className="max-w-none object-contain drop-shadow-[0_8px_12px_rgba(15,23,42,0.18)]"
+					className={cn(
+						"max-w-none object-contain drop-shadow-[0_8px_12px_rgba(15,23,42,0.18)] transition-opacity duration-200",
+						isLoaded ? "opacity-100" : "opacity-0"
+					)}
 					draggable={false}
 					style={{ width: `${previewSize}px`, height: `${previewSize}px` }}
 				/>
@@ -65,27 +74,35 @@ function CursorStylePreview({
 		);
 	}
 
-	if (style === "figma") {
-		return <img src={previewSrc} alt="" className="h-7 w-7 object-contain" draggable={false} />;
-	}
-
-	if (style === "dot") {
-		return (
-			<span className="h-[14px] w-[14px] rounded-full border-[2.5px] border-neutral-800 bg-white shadow-[0_8px_12px_rgba(15,23,42,0.16)]" />
-		);
-	}
-
 	return (
-		<img
-			src={previewSrc ?? tahoeCursorUrl}
-			alt=""
-			className="h-7 w-7 object-contain"
-			draggable={false}
-		/>
+		<div className="relative w-7 h-7 flex items-center justify-center">
+			{!isLoaded && style !== "dot" && <Skeleton className="absolute inset-0 rounded-full" variant="glass" animation="shimmer-premium" />}
+			{style === "figma" ? (
+				<img 
+					src={previewSrc} 
+					onLoad={() => setIsLoaded(true)}
+					alt="" 
+					className={cn("h-7 w-7 object-contain transition-opacity duration-200", isLoaded ? "opacity-100" : "opacity-0")} 
+					draggable={false} 
+				/>
+			) : style === "dot" ? (
+				<span className="h-[14px] w-[14px] rounded-full border-[2.5px] border-neutral-800 bg-white shadow-[0_8px_12px_rgba(15,23,42,0.16)]" />
+			) : (
+				<img
+					src={previewSrc ?? tahoeCursorUrl}
+					onLoad={() => setIsLoaded(true)}
+					alt=""
+					className={cn("h-7 w-7 object-contain transition-opacity duration-200", isLoaded ? "opacity-100" : "opacity-0")}
+					draggable={false}
+				/>
+			)}
+		</div>
 	);
-}
+});
 
-export function CursorSection({
+CursorStylePreview.displayName = "CursorStylePreview";
+
+export const CursorSection = memo(({
 	tSettings,
 	t,
 	showCursor,
@@ -113,6 +130,7 @@ export function CursorSection({
 	showDevMotionControls,
 	initialEditorPreferences,
 	extensionPanels,
+	isInitialLoading = false,
 }: {
 	tSettings: (key: string, fallback?: string) => string;
 	t: (key: string, fallback?: string) => string;
@@ -141,7 +159,26 @@ export function CursorSection({
 	showDevMotionControls: boolean;
 	initialEditorPreferences: EditorPreferences;
 	extensionPanels: SettingsPanelExtension[];
-}) {
+	isInitialLoading?: boolean;
+}) => {
+	const [visibleCount, setVisibleCount] = useState(4);
+	const [isPending] = useTransition();
+
+	useEffect(() => {
+		let frameId: number;
+		const step = () => {
+			setVisibleCount(prev => {
+				if (prev < cursorStyleOptions.length) {
+					frameId = requestAnimationFrame(step);
+					return Math.min(prev + 4, cursorStyleOptions.length);
+				}
+				return prev;
+			});
+		};
+		frameId = requestAnimationFrame(step);
+		return () => cancelAnimationFrame(frameId);
+	}, [cursorStyleOptions.length]);
+
 	const resetCursorSection = () => {
 		onShowCursorChange?.(initialEditorPreferences.showCursor);
 		onLoopCursorChange?.(initialEditorPreferences.loopCursor);
@@ -161,8 +198,34 @@ export function CursorSection({
 		onCursorSwayChange?.(initialEditorPreferences.cursorSway);
 	};
 
+	if (isInitialLoading || isPending) {
+		return (
+			<section className="flex flex-col gap-2 animate-in fade-in duration-200">
+				<div className="flex items-center justify-between gap-3">
+					<Skeleton className="h-3 w-16" variant="subtle" />
+					<Skeleton className="h-3 w-10" variant="subtle" />
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<Skeleton className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<Skeleton className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<div className="grid grid-cols-4 gap-2 py-1">
+						{[...Array(8)].map((_, i) => (
+							<Skeleton key={i} className="h-12 w-full rounded-xl" variant="subtle" animation="shimmer-premium" />
+						))}
+					</div>
+					<Skeleton className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+				</div>
+				<SettingsExtensionPanels
+					panels={extensionPanels}
+					sections={["cursor"]}
+					isInitialLoading={true}
+				/>
+			</section>
+		);
+	}
+
 	return (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-2 animate-in fade-in duration-300">
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex items-center gap-3">
 					<p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -196,35 +259,43 @@ export function CursorSection({
 				</div>
 			</div>
 			<div className="flex flex-col gap-1.5">
-				<ToggleGroup
-					type="single"
-					value={cursorStyle}
-					onValueChange={(value) => value && onCursorStyleChange?.(value as CursorStyle)}
-					className="grid grid-cols-4 gap-2"
-					aria-label={tSettings("effects.cursorStyle", "Cursor Style")}
-				>
-					{cursorStyleOptions.map((option) => (
-						<ToggleGroupItem
-							key={option.value}
-							value={option.value}
-							title={option.label}
-							aria-label={option.label}
-							className={cn(
-								"group aspect-square h-auto min-w-0 rounded-[10px] border border-foreground/10 bg-foreground/[0.03] p-3 text-left text-foreground shadow-none transition-all hover:border-foreground/20 hover:bg-foreground/[0.06]",
-								"data-[state=on]:border-[#2563EB]/70 data-[state=on]:bg-[#2563EB]/12 data-[state=on]:text-foreground",
-							)}
-						>
-							<div className="flex h-full flex-col items-center justify-between gap-3">
-								<div className="flex min-h-0 flex-1 items-center justify-center rounded-lg px-2 py-1.5">
-									<CursorStylePreview
-										style={option.value}
-										previewUrls={cursorPreviewUrls}
-									/>
+				{isInitialLoading || isPending ? (
+					<div className="grid grid-cols-4 gap-2">
+						{Array.from({ length: 4 }).map((_, i) => (
+							<Skeleton key={i} className="aspect-square w-full rounded-[10px]" variant="subtle" animation="shimmer-premium" />
+						))}
+					</div>
+				) : (
+					<ToggleGroup
+						type="single"
+						value={cursorStyle}
+						onValueChange={(value) => value && onCursorStyleChange?.(value as CursorStyle)}
+						className="grid grid-cols-4 gap-2"
+						aria-label={tSettings("effects.cursorStyle", "Cursor Style")}
+					>
+						{cursorStyleOptions.slice(0, visibleCount).map((option) => (
+							<ToggleGroupItem
+								key={option.value}
+								value={option.value}
+								title={option.label}
+								aria-label={option.label}
+								className={cn(
+									"group aspect-square h-auto min-w-0 rounded-[10px] border border-foreground/10 bg-foreground/[0.03] p-3 text-left text-foreground shadow-none transition-all hover:border-foreground/20 hover:bg-foreground/[0.06]",
+									"data-[state=on]:border-[#2563EB]/70 data-[state=on]:bg-[#2563EB]/12 data-[state=on]:text-foreground",
+								)}
+							>
+								<div className="flex h-full flex-col items-center justify-between gap-3">
+									<div className="flex min-h-0 flex-1 items-center justify-center rounded-lg px-2 py-1.5">
+										<CursorStylePreview
+											style={option.value}
+											previewUrls={cursorPreviewUrls}
+										/>
+									</div>
 								</div>
-							</div>
-						</ToggleGroupItem>
-					))}
-				</ToggleGroup>
+							</ToggleGroupItem>
+						))}
+					</ToggleGroup>
+				)}
 				<SliderControl
 					label={tSettings("effects.cursorSize")}
 					value={cursorSize}
@@ -298,4 +369,6 @@ export function CursorSection({
 			<SettingsExtensionPanels panels={extensionPanels} sections={["cursor"]} />
 		</section>
 	);
-}
+});
+
+CursorSection.displayName = "CursorSection";

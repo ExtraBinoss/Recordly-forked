@@ -1,5 +1,4 @@
-import { Palette } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import minimalCursorUrl from "@/assets/cursors/custom/minimal-cursor.svg";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n, useScopedT } from "../../../contexts/I18nContext";
@@ -32,6 +31,7 @@ import {
 	DEFAULT_ZOOM_OUT_DURATION_MS,
 } from "../types";
 import { cursorSetAssets } from "../videoPlayback/uploadedCursorAssets";
+import { Palette } from "@phosphor-icons/react";
 
 const tahoeCursorUrl = cursorSetAssets.tahoe.arrow.url;
 
@@ -198,6 +198,10 @@ export function SettingsPanel({
 	const activeEffectSection = activeEffectSectionProp ?? internalActiveEffectSection;
 	const showDevMotionControls = import.meta.env.DEV;
 
+	// Optimization: Defer the section switch to keep the UI snappy
+	const deferredActiveSection = useDeferredValue(activeEffectSection);
+	const isSwitchingSection = activeEffectSection !== deferredActiveSection;
+
 	// Find selected annotation
 	const selectedAnnotation = selectedAnnotationId
 		? annotationRegions.find((a) => a.id === selectedAnnotationId)
@@ -315,7 +319,7 @@ export function SettingsPanel({
 		);
 	}
 
-	const sectionProps = useSettingsSectionProps({
+	const sectionProps = useMemo(() => useSettingsSectionProps({
 		backgroundProps: {
 			tSettings,
 			t,
@@ -340,6 +344,7 @@ export function SettingsPanel({
 			initialEditorPreferences,
 			builtInWallpaperPaths,
 			extensionWallpaperPaths,
+			isInitialLoading: isInitialLoading || isSwitchingSection,
 		},
 		frameProps: {
 			tSettings,
@@ -356,12 +361,14 @@ export function SettingsPanel({
 			frame,
 			onFrameChange,
 			initialEditorPreferences,
+			isInitialLoading: isSwitchingSection,
 		},
 		cropProps: {
 			tSettings,
 			t,
 			cropRegion,
 			onCropChange,
+			isInitialLoading: isSwitchingSection,
 		},
 		captionsProps: {
 			tSettings,
@@ -380,6 +387,7 @@ export function SettingsPanel({
 			isGeneratingCaptions,
 			captionCueCount,
 			extensionPanels,
+			isInitialLoading: isSwitchingSection,
 		},
 		zoomProps: {
 			tSettings,
@@ -401,6 +409,7 @@ export function SettingsPanel({
 			onZoomInDurationMsChange,
 			onZoomOutDurationMsChange,
 			extensionPanels,
+			isInitialLoading: isSwitchingSection,
 		},
 		audioProps: {
 			tSettings,
@@ -409,6 +418,7 @@ export function SettingsPanel({
 			selectedAudioNormalize,
 			onAudioVolumeChange,
 			onAudioNormalizeChange,
+			isInitialLoading: isSwitchingSection,
 		},
 		clipProps: {
 			tSettings,
@@ -425,6 +435,7 @@ export function SettingsPanel({
 			sourceAudioTrackSettings,
 			onSourceAudioTrackVolumeChange,
 			onSourceAudioTrackNormalizeChange,
+			isInitialLoading: isSwitchingSection,
 		},
 		cursorProps: {
 			tSettings,
@@ -454,6 +465,7 @@ export function SettingsPanel({
 			showDevMotionControls,
 			initialEditorPreferences,
 			extensionPanels,
+			isInitialLoading: isSwitchingSection,
 		},
 		webcamProps: {
 			tSettings,
@@ -467,6 +479,7 @@ export function SettingsPanel({
 			onClearWebcam,
 			initialEditorPreferences,
 			extensionPanels,
+			isInitialLoading: isSwitchingSection,
 		},
 		generalSettingsProps: {
 			t,
@@ -511,16 +524,147 @@ export function SettingsPanel({
 			onCursorSpringDampingMultiplierChange,
 			cursorSpringMassMultiplier,
 			onCursorSpringMassMultiplierChange,
+			isInitialLoading: isSwitchingSection,
 		},
-	});
+	}), [
+		tSettings,
+		t,
+		selected,
+		onWallpaperChange,
+		backgroundBlur,
+		onBackgroundBlurChange,
+		backgroundTab,
+		setBackgroundTab,
+		fileInputRef,
+		handleImageUpload,
+		customImages,
+		imageWallpaperTiles,
+		videoWallpaperTiles,
+		handleVideoUpload,
+		handleRemoveCustomImage,
+		customColorInputRef,
+		selectedColor,
+		setSelectedColor,
+		gradient,
+		setGradient,
+		initialEditorPreferences,
+		builtInWallpaperPaths,
+		extensionWallpaperPaths,
+		isInitialLoading,
+		isSwitchingSection,
+		shadowIntensity,
+		borderRadius,
+		onShadowChange,
+		onBorderRadiusChange,
+		padding,
+		onPaddingChange,
+		aspectRatio,
+		onAspectRatioChange,
+		availableFrames,
+		frame,
+		onFrameChange,
+		cropRegion,
+		onCropChange,
+		autoCaptionSettings,
+		onAutoCaptionSettingsChange,
+		onPickWhisperModel,
+		onGenerateAutoCaptions,
+		onClearAutoCaptions,
+		onDownloadWhisperSmallModel,
+		onDeleteWhisperSmallModel,
+		whisperModelPath,
+		whisperModelDownloadStatus,
+		whisperModelDownloadProgress,
+		isGeneratingCaptions,
+		captionCueCount,
+		extensionPanels,
+		selectedZoomId,
+		selectedZoomDepth,
+		selectedZoomMode,
+		onZoomModeChange,
+		onZoomDepthChange,
+		zoomClassicMode,
+		onZoomClassicModeChange,
+		showDevMotionControls,
+		onZoomDelete,
+		onZoomMotionBlurTuningChange,
+		onCameraSpringStiffnessMultiplierChange,
+		onCameraSpringDampingMultiplierChange,
+		onCameraSpringMassMultiplierChange,
+		onZoomInDurationMsChange,
+		onZoomOutDurationMsChange,
+		selectedAudioVolume,
+		selectedAudioNormalize,
+		onAudioVolumeChange,
+		onAudioNormalizeChange,
+		selectedClipId,
+		selectedClipSpeed,
+		selectedClipMuted,
+		selectedClipShowSourceAudio,
+		hasClipSourceAudio,
+		onClipSpeedChange,
+		onClipMutedChange,
+		onClipShowSourceAudioChange,
+		sourceAudioTrackMeta,
+		sourceAudioTrackSettings,
+		onSourceAudioTrackVolumeChange,
+		onSourceAudioTrackNormalizeChange,
+		showCursor,
+		onShowCursorChange,
+		loopCursor,
+		onLoopCursorChange,
+		cursorStyle,
+		onCursorStyleChange,
+		cursorStyleOptions,
+		cursorPreviewUrls,
+		cursorSize,
+		onCursorSizeChange,
+		onCursorSmoothingChange,
+		onCursorSpringStiffnessMultiplierChange,
+		onCursorSpringDampingMultiplierChange,
+		onCursorSpringMassMultiplierChange,
+		cursorMotionBlur,
+		onCursorMotionBlurChange,
+		cursorClickBounce,
+		onCursorClickBounceChange,
+		cursorClickBounceDuration,
+		onCursorClickBounceDurationChange,
+		cursorSway,
+		onCursorSwayChange,
+		webcam,
+		webcamPreviewSrc,
+		webcamPreviewCurrentTime,
+		webcamPreviewPlaying,
+		onWebcamChange,
+		onUploadWebcam,
+		onClearWebcam,
+		themePreference,
+		setThemePreference,
+		locale,
+		setLocale,
+		autoApplyFreshRecordingAutoZooms,
+		onAutoApplyFreshRecordingAutoZoomsChange,
+		connectZooms,
+		onConnectZoomsChange,
+		nativeCaptureUnavailableSession,
+		onOpenNativeCaptureUnavailableModal,
+		zoomMotionBlurTuning,
+		cameraSpringStiffnessMultiplier,
+		cameraSpringDampingMultiplier,
+		cameraSpringMassMultiplier,
+		cursorSpringStiffnessMultiplier,
+		cursorSpringDampingMultiplier,
+		cursorSpringMassMultiplier,
+	]);
 
 	return (
 		<SettingsPanelShell
 			activeEffectSection={activeEffectSection}
 			content={
 				<SettingsSectionRouter
-					activeEffectSection={activeEffectSection}
+					activeEffectSection={deferredActiveSection}
 					extensionPanels={extensionPanels}
+					isInitialLoading={isSwitchingSection}
 					{...sectionProps}
 				/>
 			}

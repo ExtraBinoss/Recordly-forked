@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	TEMPORAL_MOTION_BLUR_DEFAULT_SAMPLE_COUNT,
 	TEMPORAL_MOTION_BLUR_DEFAULT_SHUTTER_FRACTION,
@@ -30,6 +31,7 @@ export function ZoomSection({
 	onZoomInDurationMsChange,
 	onZoomOutDurationMsChange,
 	extensionPanels,
+	isInitialLoading = false,
 }: {
 	tSettings: (key: string, fallback?: string) => string;
 	t: (key: string, fallback?: string) => string;
@@ -50,6 +52,7 @@ export function ZoomSection({
 	onZoomInDurationMsChange?: (duration: number) => void;
 	onZoomOutDurationMsChange?: (duration: number) => void;
 	extensionPanels: SettingsPanelExtension[];
+	isInitialLoading?: boolean;
 }) {
 	const resetZoomSection = () => {
 		onZoomMotionBlurTuningChange?.(initialEditorPreferences.zoomMotionBlurTuning);
@@ -65,8 +68,33 @@ export function ZoomSection({
 		onZoomClassicModeChange?.(false);
 	};
 
+	if (isInitialLoading) {
+		return (
+			<section className="flex flex-col gap-2 animate-in fade-in duration-200">
+				<div className="flex items-center justify-between gap-3">
+					<Skeleton className="h-3 w-16" variant="subtle" />
+					<Skeleton className="h-3 w-10" variant="subtle" />
+				</div>
+				<Skeleton className="h-10 w-full rounded-lg mb-1" variant="subtle" animation="shimmer-premium" />
+				<div className="grid grid-cols-6 gap-1.5">
+					{[...Array(6)].map((_, i) => (
+						<Skeleton key={i} className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					))}
+				</div>
+				<div className="h-px bg-foreground/[0.06] my-1" />
+				<Skeleton className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+				<Skeleton className="h-16 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+				<SettingsExtensionPanels
+					panels={extensionPanels}
+					sections={["zoom"]}
+					isInitialLoading={true}
+				/>
+			</section>
+		);
+	}
+
 	return (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-2 animate-in fade-in duration-300">
 			{selectedZoomId && (
 				<>
 					<div className="flex items-center justify-between gap-3">

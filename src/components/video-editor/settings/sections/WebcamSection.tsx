@@ -1,6 +1,7 @@
 import { Trash as Trash2, UploadSimple as Upload } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { EditorPreferences } from "../../editorPreferences";
 import { SliderControl } from "../../SliderControl";
@@ -39,6 +40,7 @@ export function WebcamSection({
 	onClearWebcam,
 	initialEditorPreferences,
 	extensionPanels,
+	isInitialLoading = false,
 }: {
 	tSettings: (key: string, fallback?: string) => string;
 	t: (key: string, fallback?: string) => string;
@@ -51,6 +53,7 @@ export function WebcamSection({
 	onClearWebcam?: () => void;
 	initialEditorPreferences: EditorPreferences;
 	extensionPanels: SettingsPanelExtension[];
+	isInitialLoading?: boolean;
 }) {
 	const webcamFileName = webcam?.sourcePath?.split(/[\\/]/).pop() ?? null;
 	const webcamPositionPreset = webcam?.positionPreset ?? DEFAULT_WEBCAM_POSITION_PRESET;
@@ -84,8 +87,41 @@ export function WebcamSection({
 		});
 	};
 
+	if (isInitialLoading) {
+		return (
+			<section className="flex flex-col gap-2 animate-in fade-in duration-200">
+				<div className="flex items-center justify-between gap-3">
+					<Skeleton className="h-3 w-16" variant="subtle" />
+					<Skeleton className="h-3 w-10" variant="subtle" />
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<Skeleton className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<Skeleton className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<Skeleton className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					<div className="rounded-lg bg-foreground/[0.03] px-2.5 py-3 space-y-2">
+						<Skeleton className="h-3 w-12" variant="subtle" />
+						<Skeleton className="h-32 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					</div>
+					<div className="rounded-lg bg-foreground/[0.03] px-2.5 py-3 space-y-3">
+						<Skeleton className="h-3 w-14" variant="subtle" />
+						<div className="grid grid-cols-3 gap-1.5">
+							{[...Array(3)].map((_, i) => (
+								<Skeleton key={i} className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+							))}
+						</div>
+					</div>
+				</div>
+				<SettingsExtensionPanels
+					panels={extensionPanels}
+					sections={["webcam"]}
+					isInitialLoading={true}
+				/>
+			</section>
+		);
+	}
+
 	return (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-2 animate-in fade-in duration-300">
 			<div className="flex items-center justify-between gap-3">
 				<p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
 					{tSettings("sections.webcam", "Webcam")}

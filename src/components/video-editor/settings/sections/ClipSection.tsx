@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { SliderControl } from "../../SliderControl";
 
@@ -18,6 +19,7 @@ export function ClipSection({
 	sourceAudioTrackSettings,
 	onSourceAudioTrackVolumeChange,
 	onSourceAudioTrackNormalizeChange,
+	isInitialLoading = false,
 }: {
 	tSettings: (key: string, fallback?: string) => string;
 	t: (key: string, fallback?: string) => string;
@@ -33,9 +35,30 @@ export function ClipSection({
 	sourceAudioTrackSettings: Record<string, { volume: number; normalize: boolean }>;
 	onSourceAudioTrackVolumeChange?: (id: string, volume: number) => void;
 	onSourceAudioTrackNormalizeChange?: (id: string, normalize: boolean) => void;
+	isInitialLoading?: boolean;
 }) {
+	if (isInitialLoading) {
+		return (
+			<section className="flex flex-col gap-2 animate-in fade-in duration-200">
+				<div className="flex items-center justify-between gap-3">
+					<Skeleton className="h-3 w-12" variant="subtle" />
+				</div>
+				<Skeleton className="h-3 w-14" variant="subtle" />
+				<div className="grid grid-cols-4 gap-1.5">
+					{[...Array(8)].map((_, i) => (
+						<Skeleton key={i} className="h-10 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+					))}
+				</div>
+				<div className="mt-2 flex flex-col gap-2 border-t border-foreground/5 pt-3">
+					<Skeleton className="h-3 w-14" variant="subtle" />
+					<Skeleton className="h-12 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+				</div>
+			</section>
+		);
+	}
+
 	return (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-2 animate-in fade-in duration-300">
 			<div className="flex items-center justify-between gap-3">
 				<p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{tSettings("clip.title", "Clip")}</p>
 				{selectedClipSpeed != null && selectedClipSpeed !== 1 && <span className="rounded-full bg-[#06b6d4]/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#06b6d4]">{selectedClipSpeed}×</span>}

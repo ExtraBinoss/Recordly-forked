@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { type ExtensionSettingField, extensionHost } from "@/lib/extensions";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select";
 import { SliderControl } from "../../SliderControl";
 
@@ -15,16 +16,28 @@ function getStepPrecision(step: number): number {
 
 export type SettingsPanelExtension = ReturnType<typeof extensionHost.getSettingsPanels>[number];
 
-export function ExtensionSettingsSection({
+export const ExtensionSettingsSection = memo(({
 	extensionId,
 	label,
 	fields,
+	isInitialLoading = false,
 }: {
 	extensionId: string;
 	label: string;
 	fields: ExtensionSettingField[];
-}) {
+	isInitialLoading?: boolean;
+}) => {
 	const [, forceUpdate] = useState(0);
+
+	if (isInitialLoading) {
+		return (
+			<div className="flex flex-col gap-3 mt-2 pt-2 border-t border-foreground/[0.06]">
+				<Skeleton className="h-3 w-20 mb-1" variant="subtle" />
+				<Skeleton className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+				<Skeleton className="h-8 w-full rounded-lg" variant="subtle" animation="shimmer-premium" />
+			</div>
+		);
+	}
 
 	return (
 		<div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-foreground/[0.06]">
@@ -60,7 +73,9 @@ export function ExtensionSettingsSection({
 
 				if (field.type === "slider") {
 					const step = field.step ?? 0.01;
-					const precision = getStepPrecision(step);
+					// Basic memoization for precision calculation
+					const precision = useMemo(() => getStepPrecision(step), [step]);
+					
 					return (
 						<div key={field.id} className="mt-1">
 							<SliderControl
@@ -176,15 +191,19 @@ export function ExtensionSettingsSection({
 			})}
 		</div>
 	);
-}
+});
 
-export function SettingsExtensionPanels({
+ExtensionSettingsSection.displayName = "ExtensionSettingsSection";
+
+export const SettingsExtensionPanels = memo(({
 	panels,
 	sections,
+	isInitialLoading = false,
 }: {
 	panels: SettingsPanelExtension[];
 	sections: string[];
-}) {
+	isInitialLoading?: boolean;
+}) => {
 	return (
 		<>
 			{panels
@@ -198,8 +217,11 @@ export function SettingsExtensionPanels({
 						extensionId={panel.extensionId}
 						label={panel.panel.label}
 						fields={panel.panel.fields}
+						isInitialLoading={isInitialLoading}
 					/>
 				))}
 		</>
 	);
-}
+});
+
+SettingsExtensionPanels.displayName = "SettingsExtensionPanels";
