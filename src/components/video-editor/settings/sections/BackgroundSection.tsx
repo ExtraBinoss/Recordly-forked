@@ -1,41 +1,217 @@
 import { UploadSimple as Upload, X } from "@phosphor-icons/react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { getRenderableVideoUrl } from "@/lib/assetPath";
 import { cn } from "@/lib/utils";
-import { isVideoWallpaperSource } from "@/lib/wallpapers";
+import { BUILT_IN_WALLPAPERS, isVideoWallpaperSource } from "@/lib/wallpapers";
+import type { EditorPreferences } from "../../editorPreferences";
 import { SliderControl } from "../../SliderControl";
 import { GRADIENTS } from "../constants";
+import type { BackgroundTab, WallpaperTile as WallpaperTileData } from "../hooks/useSettingsPanel";
 
-export function BackgroundSection(props: any) {
-	const {
-		tSettings,
-		t,
-		resetBackgroundSection,
-		backgroundBlur,
-		defaultBackgroundBlur,
-		onBackgroundBlurChange,
-		backgroundTab,
-		setBackgroundTab,
-		fileInputRef,
-		handleImageUpload,
-		customImages,
-		getWallpaperTileState,
-		renderWallpaperImageTile,
-		onWallpaperChange,
-		handleRemoveCustomImage,
-		imageWallpaperTiles,
-		videoWallpaperTiles,
-		handleVideoUpload,
-		customColorInputRef,
-		selectedColor,
-		setSelectedColor,
-		selected,
-		visibleColorPalette,
-		wallpaperTileClass,
-		isHexWallpaper,
-		gradient,
-		setGradient,
-	} = props;
+const COLOR_PALETTE = [
+	"#FF0000",
+	"#FFD700",
+	"#00FF00",
+	"#FFFFFF",
+	"#0000FF",
+	"#FF6B00",
+	"#9B59B6",
+	"#E91E63",
+	"#00BCD4",
+	"#FF5722",
+	"#8BC34A",
+	"#FFC107",
+	"#2563EB",
+	"#000000",
+	"#607D8B",
+];
+
+function isHexWallpaper(value: string): boolean {
+	return /^#(?:[0-9a-f]{3}){1,2}$/i.test(value);
+}
+
+function WallpaperVideoPreview({ src }: { src: string }) {
+	const [resolvedSrc, setResolvedSrc] = useState(src);
+
+	useEffect(() => {
+		let cancelled = false;
+		setResolvedSrc(src);
+
+		void (async () => {
+			try {
+				const nextSrc = await getRenderableVideoUrl(src);
+				if (!cancelled) setResolvedSrc(nextSrc);
+			} catch {
+				if (!cancelled) setResolvedSrc(src);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [src]);
+
+	return (
+		<video
+			src={resolvedSrc}
+			muted
+			playsInline
+			preload="metadata"
+			className="h-full w-full select-none object-cover [transform:translateZ(0)]"
+			draggable={false}
+			onMouseEnter={(event) => event.currentTarget.play().catch(() => undefined)}
+			onMouseLeave={(event) => {
+				event.currentTarget.pause();
+				event.currentTarget.currentTime = 0;
+			}}
+		/>
+	);
+}
+
+type WallpaperTileProps = {
+	wallpaperUrl: string;
+	isSelected: boolean;
+	ariaLabel?: string;
+	title?: string;
+	onClick?: () => void;
+	children?: React.ReactNode;
+	tSettings: (key: string, fallback?: string) => string;
+};
+
+function wallpaperTileClass(isSelected: boolean) {
+	return cn(
+		"group relative aspect-square w-full overflow-hidden rounded-[10px] border bg-editor-bg transition-colors duration-150",
+		isSelected
+			? "border-[#2563EB] bg-foreground/[0.08]"
+			: "border-foreground/10 bg-foreground/[0.045] hover:border-foreground/20 hover:bg-foreground/[0.07]",
+	);
+}
+
+function WallpaperTile({
+	wallpaperUrl,
+	isSelected,
+	ariaLabel,
+	title,
+	onClick,
+	children,
+	tSettings,
+}: WallpaperTileProps) {
+	return (
+		<div
+			className={wallpaperTileClass(isSelected)}
+			aria-label={ariaLabel}
+			title={title}
+			onClick={onClick}
+			role="button"
+		>
+			<div className="absolute inset-[1px] overflow-hidden rounded-[8px] bg-editor-dialog">
+				{isVideoWallpaperSource(wallpaperUrl) ? (
+					<WallpaperVideoPreview src={wallpaperUrl} />
+				) : (
+					<img
+						src={wallpaperUrl}
+						alt={
+							title ??
+							ariaLabel ??
+							tSettings("background.wallpaperPreview", "Wallpaper preview")
+						}
+						className="h-full w-full select-none object-cover [transform:translateZ(0)]"
+						draggable={false}
+					/>
+				)}
+			</div>
+			{children}
+		</div>
+	);
+}
+
+export function BackgroundSection({
+	tSettings,
+	t,
+	selected,
+	onWallpaperChange,
+	backgroundBlur,
+	onBackgroundBlurChange,
+	backgroundTab,
+	setBackgroundTab,
+	fileInputRef,
+	handleImageUpload,
+	customImages,
+	imageWallpaperTiles,
+	videoWallpaperTiles,
+	handleVideoUpload,
+	handleRemoveCustomImage,
+	customColorInputRef,
+	selectedColor,
+	setSelectedColor,
+	gradient,
+	setGradient,
+	initialEditorPreferences,
+	builtInWallpaperPaths,
+	extensionWallpaperPaths,
+}: {
+	tSettings: (key: string, fallback?: string) => string;
+	t: (key: string, fallback?: string) => string;
+	selected: string;
+	onWallpaperChange: (path: string) => void;
+	backgroundBlur: number;
+	onBackgroundBlurChange?: (amount: number) => void;
+	backgroundTab: BackgroundTab;
+	setBackgroundTab: (tab: BackgroundTab) => void;
+	fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
+	handleImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+	customImages: string[];
+	imageWallpaperTiles: WallpaperTileData[];
+	videoWallpaperTiles: WallpaperTileData[];
+	handleVideoUpload: () => Promise<void>;
+	handleRemoveCustomImage: (imageUrl: string, event: React.MouseEvent) => void;
+	customColorInputRef: React.MutableRefObject<HTMLInputElement | null>;
+	selectedColor: string;
+	setSelectedColor: (color: string) => void;
+	gradient: string;
+	setGradient: (gradient: string) => void;
+	initialEditorPreferences: EditorPreferences;
+	builtInWallpaperPaths: string[];
+	extensionWallpaperPaths: string[];
+}) {
+	const visibleColorPalette = COLOR_PALETTE.slice(0, 15);
+
+	const resetBackgroundSection = () => {
+		onBackgroundBlurChange?.(initialEditorPreferences.backgroundBlur);
+
+		const preferredWallpaper = initialEditorPreferences.wallpaper;
+		const hasPreferredWallpaper =
+			(preferredWallpaper && builtInWallpaperPaths.includes(preferredWallpaper)) ||
+			(preferredWallpaper && extensionWallpaperPaths.includes(preferredWallpaper)) ||
+			(preferredWallpaper && customImages.includes(preferredWallpaper)) ||
+			(preferredWallpaper && isHexWallpaper(preferredWallpaper)) ||
+			(preferredWallpaper && GRADIENTS.some((candidate) => candidate === preferredWallpaper));
+
+		onWallpaperChange(
+			(hasPreferredWallpaper ? preferredWallpaper : "") ||
+				builtInWallpaperPaths[0] ||
+				extensionWallpaperPaths[0] ||
+				BUILT_IN_WALLPAPERS[0]?.publicPath ||
+				"",
+		);
+	};
+
+	const getWallpaperTileState = (candidateValue: string, previewPath?: string) => {
+		if (!selected) return false;
+		if (selected === candidateValue || (previewPath && selected === previewPath)) return true;
+		try {
+			const clean = (value: string) => value.replace(/^file:\/\//, "").replace(/^\//, "");
+			if (clean(selected).endsWith(clean(candidateValue))) return true;
+			if (clean(candidateValue).endsWith(clean(selected))) return true;
+			if (previewPath && clean(selected).endsWith(clean(previewPath))) return true;
+			if (previewPath && clean(previewPath).endsWith(clean(selected))) return true;
+		} catch {
+			return false;
+		}
+		return false;
+	};
 
 	return (
 		<div className="space-y-4">
@@ -55,7 +231,7 @@ export function BackgroundSection(props: any) {
 				<SliderControl
 					label={tSettings("effects.backgroundBlur")}
 					value={backgroundBlur}
-					defaultValue={defaultBackgroundBlur}
+					defaultValue={initialEditorPreferences.backgroundBlur}
 					min={0}
 					max={8}
 					step={0.25}
@@ -79,14 +255,18 @@ export function BackgroundSection(props: any) {
 								<button
 									key={option.value}
 									type="button"
-									onClick={() => setBackgroundTab(option.value)}
+									onClick={() => setBackgroundTab(option.value as BackgroundTab)}
 									className="relative rounded-lg text-[10px] font-semibold tracking-wide transition-colors"
 								>
 									{isActive ? (
 										<motion.span
 											layoutId="background-picker-pill"
 											className="absolute inset-0 rounded-lg bg-[#2563EB]"
-											transition={{ type: "spring", stiffness: 420, damping: 34 }}
+											transition={{
+												type: "spring",
+												stiffness: 420,
+												damping: 34,
+											}}
 										/>
 									) : null}
 									<span
@@ -118,7 +298,9 @@ export function BackgroundSection(props: any) {
 								<div className="mt-0 space-y-2">
 									<input
 										type="file"
-										ref={fileInputRef}
+										ref={(node) => {
+											fileInputRef.current = node;
+										}}
 										onChange={handleImageUpload}
 										accept=".jpg,.jpeg,image/jpeg"
 										className="hidden"
@@ -132,40 +314,52 @@ export function BackgroundSection(props: any) {
 										{tSettings("background.uploadCustom")}
 									</Button>
 									<div className="grid grid-cols-8 gap-1.5">
-										{customImages.map((imageUrl: string, idx: number) => {
-											const isSelected = getWallpaperTileState(imageUrl);
-											return renderWallpaperImageTile(imageUrl, isSelected, {
-												key: `custom-${idx}`,
-												ariaLabel: isVideoWallpaperSource(imageUrl)
-													? (imageUrl.split(/[\\/]/).pop() ??
-														tSettings("background.video", "Video background"))
-													: undefined,
-												title: isVideoWallpaperSource(imageUrl)
-													? imageUrl.split(/[\\/]/).pop()
-													: undefined,
-												onClick: () => onWallpaperChange(imageUrl),
-												children: (
-													<button
-														onClick={(event) => handleRemoveCustomImage(imageUrl, event)}
-														className="absolute top-0.5 right-0.5 w-3 h-3 bg-red-500/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-													>
-														<X className="w-2 h-2 text-white" />
-													</button>
-												),
-											});
-										})}
-										{imageWallpaperTiles.map((tile: any) =>
-											renderWallpaperImageTile(
-												tile.previewUrl,
-												getWallpaperTileState(tile.value, tile.previewUrl),
-												{
-													key: tile.key,
-													ariaLabel: tile.label,
-													title: tile.label,
-													onClick: () => onWallpaperChange(tile.value),
-												},
-											),
-										)}
+										{customImages.map((imageUrl, index) => (
+											<WallpaperTile
+												key={`custom-${index}`}
+												wallpaperUrl={imageUrl}
+												isSelected={getWallpaperTileState(imageUrl)}
+												ariaLabel={
+													isVideoWallpaperSource(imageUrl)
+														? (imageUrl.split(/[\\/]/).pop() ??
+															tSettings(
+																"background.video",
+																"Video background",
+															))
+														: undefined
+												}
+												title={
+													isVideoWallpaperSource(imageUrl)
+														? imageUrl.split(/[\\/]/).pop()
+														: undefined
+												}
+												onClick={() => onWallpaperChange(imageUrl)}
+												tSettings={tSettings}
+											>
+												<button
+													onClick={(event) =>
+														handleRemoveCustomImage(imageUrl, event)
+													}
+													className="absolute top-0.5 right-0.5 w-3 h-3 bg-red-500/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+												>
+													<X className="w-2 h-2 text-white" />
+												</button>
+											</WallpaperTile>
+										))}
+										{imageWallpaperTiles.map((tile) => (
+											<WallpaperTile
+												key={tile.key}
+												wallpaperUrl={tile.previewUrl}
+												isSelected={getWallpaperTileState(
+													tile.value,
+													tile.previewUrl,
+												)}
+												ariaLabel={tile.label}
+												title={tile.label}
+												onClick={() => onWallpaperChange(tile.value)}
+												tSettings={tSettings}
+											/>
+										))}
 									</div>
 								</div>
 							) : backgroundTab === "video" ? (
@@ -179,40 +373,53 @@ export function BackgroundSection(props: any) {
 										{tSettings("background.uploadCustomVideo", "Upload Video")}
 									</Button>
 									<div className="grid grid-cols-8 gap-1.5">
-										{customImages.filter(isVideoWallpaperSource).map((videoUrl: string, idx: number) =>
-											renderWallpaperImageTile(videoUrl, getWallpaperTileState(videoUrl), {
-												key: `custom-video-${idx}`,
-												ariaLabel: videoUrl.split(/[\\/]/).pop() ?? "Video background",
-												title: videoUrl.split(/[\\/]/).pop(),
-												onClick: () => onWallpaperChange(videoUrl),
-												children: (
+										{customImages
+											.filter(isVideoWallpaperSource)
+											.map((videoUrl, index) => (
+												<WallpaperTile
+													key={`custom-video-${index}`}
+													wallpaperUrl={videoUrl}
+													isSelected={getWallpaperTileState(videoUrl)}
+													ariaLabel={
+														videoUrl.split(/[\\/]/).pop() ??
+														"Video background"
+													}
+													title={videoUrl.split(/[\\/]/).pop()}
+													onClick={() => onWallpaperChange(videoUrl)}
+													tSettings={tSettings}
+												>
 													<button
-														onClick={(event) => handleRemoveCustomImage(videoUrl, event)}
+														onClick={(event) =>
+															handleRemoveCustomImage(videoUrl, event)
+														}
 														className="absolute top-0.5 right-0.5 w-3 h-3 bg-red-500/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
 													>
 														<X className="w-2 h-2 text-white" />
 													</button>
-												),
-											}),
-										)}
-										{videoWallpaperTiles.map((tile: any) =>
-											renderWallpaperImageTile(
-												tile.previewUrl,
-												getWallpaperTileState(tile.value, tile.previewUrl),
-												{
-													key: tile.key,
-													ariaLabel: tile.label,
-													title: tile.label,
-													onClick: () => onWallpaperChange(tile.value),
-												},
-											),
-										)}
+												</WallpaperTile>
+											))}
+										{videoWallpaperTiles.map((tile) => (
+											<WallpaperTile
+												key={tile.key}
+												wallpaperUrl={tile.previewUrl}
+												isSelected={getWallpaperTileState(
+													tile.value,
+													tile.previewUrl,
+												)}
+												ariaLabel={tile.label}
+												title={tile.label}
+												onClick={() => onWallpaperChange(tile.value)}
+												tSettings={tSettings}
+											/>
+										))}
 									</div>
 								</div>
 							) : backgroundTab === "color" ? (
 								<div className="mt-0 space-y-2">
 									<input
-										ref={customColorInputRef}
+										ref={(node) => {
+											customColorInputRef.current = node;
+										}}
 										type="color"
 										value={selectedColor}
 										onChange={(event) => {
@@ -222,7 +429,7 @@ export function BackgroundSection(props: any) {
 										className="sr-only"
 									/>
 									<div className="grid grid-cols-8 gap-1.5">
-										{visibleColorPalette.map((color: string) => (
+										{visibleColorPalette.map((color) => (
 											<button
 												key={color}
 												type="button"
@@ -243,8 +450,9 @@ export function BackgroundSection(props: any) {
 											className={wallpaperTileClass(
 												isHexWallpaper(selected) &&
 													!visibleColorPalette.some(
-														(color: string) =>
-															color.toLowerCase() === selected.toLowerCase(),
+														(color) =>
+															color.toLowerCase() ===
+															selected.toLowerCase(),
 													),
 											)}
 											style={{
@@ -260,11 +468,11 @@ export function BackgroundSection(props: any) {
 								</div>
 							) : (
 								<div className="mt-0 grid grid-cols-8 gap-1.5">
-									{GRADIENTS.map((candidate, idx) => (
+									{GRADIENTS.map((candidate, index) => (
 										<div
 											key={candidate}
 											className={wallpaperTileClass(gradient === candidate)}
-											aria-label={`Gradient ${idx + 1}`}
+											aria-label={`Gradient ${index + 1}`}
 											onClick={() => {
 												setGradient(candidate);
 												onWallpaperChange(candidate);
