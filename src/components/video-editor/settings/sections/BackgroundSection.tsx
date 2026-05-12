@@ -105,6 +105,42 @@ function wallpaperTileClass(isSelected: boolean) {
 	);
 }
 
+// Singleton Observer Manager to share one IntersectionObserver instance across all tiles
+const observerManager = {
+	observer: null as IntersectionObserver | null,
+	callbacks: new WeakMap<Element, (isInView: boolean) => void>(),
+
+	getObserver() {
+		if (typeof window === "undefined") return null;
+		if (!this.observer) {
+			this.observer = new IntersectionObserver(
+				(entries) => {
+					entries.forEach((entry) => {
+						const callback = this.callbacks.get(entry.target);
+						if (callback) callback(entry.isIntersecting);
+					});
+				},
+				{ rootMargin: "100px" },
+			);
+		}
+		return this.observer;
+	},
+
+	observe(element: Element, callback: (isInView: boolean) => void) {
+		const obs = this.getObserver();
+		if (!obs) return;
+		this.callbacks.set(element, callback);
+		obs.observe(element);
+	},
+
+	unobserve(element: Element) {
+		const obs = this.getObserver();
+		if (!obs) return;
+		this.callbacks.delete(element);
+		obs.unobserve(element);
+	},
+};
+
 const WallpaperTile = memo(({
 	wallpaperUrl,
 	isSelected,
@@ -120,21 +156,20 @@ const WallpaperTile = memo(({
 	const isVideo = isVideoWallpaperSource(wallpaperUrl);
 
 	useEffect(() => {
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				if (entry.isIntersecting) {
-					setIsInView(true);
-					observer.disconnect();
-				}
-			},
-			{ rootMargin: "100px" } // Load slightly before it enters the viewport
-		);
+		const el = containerRef.current;
+		if (!el) return;
 
-		if (containerRef.current) {
-			observer.observe(containerRef.current);
-		}
+		observerManager.observe(el, (inView) => {
+			if (inView) {
+				setIsInView(true);
+				// Once in view, we stop observing this specific element
+				observerManager.unobserve(el);
+			}
+		});
 
-		return () => observer.disconnect();
+		return () => {
+			if (el) observerManager.unobserve(el);
+		};
 	}, []);
 
 	return (
